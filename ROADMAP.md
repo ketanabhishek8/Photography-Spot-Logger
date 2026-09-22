@@ -136,11 +136,18 @@ back to the real 14.
 ---
 
 ## Stage 4 — Feature backlog
-*Roughly in order of value for effort. Pick and choose.*
+*Roughly in order of value for effort. Pick and choose - user chose EXIF auto-fill and
+search/filter for this pass; the rest stay in the backlog.*
 
-- [ ] **EXIF auto-fill.** Read GPS coordinates out of an uploaded photo (via `exifr`) and
-      pre-fill the map pin instead of requiring a manual click. The most
-      "photography-native" feature on this list.
+- [x] **EXIF auto-fill.** `AddSpotForm.tsx` reads GPS out of the selected photo via
+      `exifr` (dynamically imported, so it doesn't bloat the initial bundle) and calls
+      back up to set the map pin automatically - only when no pin has been placed yet, so
+      it never overrides a deliberate manual pick. Verified for real, not just by
+      reading the code: generated a JPEG with actual GPS EXIF tags, injected it into the
+      live file input via a real `change` event (the Browser pane can't drive an OS file
+      picker, but this exercises the exact same React code path), and confirmed the pin
+      landed at the exact embedded coordinates with the "📍 Filled in..." message shown.
+      Also verified the no-GPS path shows the right fallback message instead of erroring.
 - [ ] **Gallery/list view.** A grid toggle alongside the map, useful once spot count grows
       past what's comfortable to scan in the sidebar list.
 - [ ] **Marker clustering.** Not needed at 14 spots; worth adding once user-submitted
@@ -148,7 +155,17 @@ back to the real 14.
 - [ ] **Edit/delete own spots.** Currently impossible for anyone, including the person who
       logged it — RLS only grants `select` + `insert`. Needs either a signed
       edit-token-per-spot scheme, or real auth (see below).
-- [ ] **Search/filter.** By name, best-time-of-day, or distance from a searched place.
+- [x] **Search/filter.** Sidebar now has a text search (matches name + description) and a
+      best-time dropdown, both client-side over the already-loaded spots (combines with
+      "Near me"). Caught a real bug while building this: the dropdown initially reused
+      the add-form's curated 6-option list (`BEST_TIME_OPTIONS`), which can't reach 5 of
+      the 11 actual values in the seed data (`Sunset`, `Morning`, `Mid morning`, etc.) -
+      switched it to derive options from the live spots data instead, so it always covers
+      what's actually filterable. **Place-name search to re-center the map was
+      intentionally left out** - it would mean embedding a live Nominatim geocoding call
+      in the app for every visitor, subject to the same usage-policy concern already
+      flagged for OSM tiles in Stage 3, rather than the handful of one-off calls used
+      during Stage 1's coordinate verification.
 
 ---
 

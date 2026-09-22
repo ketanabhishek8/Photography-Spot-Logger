@@ -31,10 +31,34 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
   const [nearbyIds, setNearbyIds] = useState<string[] | null>(null);
   const [nearbyNote, setNearbyNote] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [bestTimeFilter, setBestTimeFilter] = useState("");
 
-  const visible = useMemo(
-    () => (nearbyIds ? spots.filter((s) => nearbyIds.includes(s.id)) : spots),
-    [spots, nearbyIds],
+  const visible = useMemo(() => {
+    let list = nearbyIds ? spots.filter((s) => nearbyIds.includes(s.id)) : spots;
+
+    if (bestTimeFilter) list = list.filter((s) => s.best_time === bestTimeFilter);
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (s) => s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q),
+      );
+    }
+
+    return list;
+  }, [spots, nearbyIds, search, bestTimeFilter]);
+
+  const filtering = search.trim() !== "" || bestTimeFilter !== "";
+
+  // Derived from the actual data rather than the add-form's curated preset
+  // list (lib/types.ts BEST_TIME_OPTIONS) - the seeded spots use values like
+  // "Sunset" and "Early morning" that aren't in that shorter list, and the
+  // filter needs to be able to reach everything that's actually there.
+  const availableBestTimes = useMemo(
+    () =>
+      Array.from(new Set(spots.map((s) => s.best_time).filter((t): t is string => Boolean(t)))).sort(),
+    [spots],
   );
 
   function startAdding() {
@@ -94,7 +118,9 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
             Mumbai Photo Spots
           </h1>
           <p className="mt-0.5 text-xs text-stone-500">
-            {spots.length} spot{spots.length === 1 ? "" : "s"} logged
+            {visible.length === spots.length
+              ? `${spots.length} spot${spots.length === 1 ? "" : "s"} logged`
+              : `${visible.length} of ${spots.length} spots`}
           </p>
 
           <div className="mt-3 flex gap-2">
@@ -119,6 +145,32 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
           </div>
 
           {nearbyNote && <p className="mt-2 text-xs text-stone-500">{nearbyNote}</p>}
+
+          {!adding && (
+            <div className="mt-3 flex gap-2">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search spots..."
+                className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm
+                           outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+              />
+              <select
+                value={bestTimeFilter}
+                onChange={(e) => setBestTimeFilter(e.target.value)}
+                className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-600
+                           outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+              >
+                <option value="">Any time</option>
+                {availableBestTimes.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -139,6 +191,11 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
                 onCreated={() => {
                   resetAdding();
                   router.refresh(); // re-runs the Server Component fetch
+                }}
+                onExifLocation={(lat, lng) => {
+                  setDraftPin([lat, lng]);
+                  setPicking(false);
+                  setFlyTarget([lat, lng]); // the photo's location is likely off-screen
                 }}
               />
             </div>
@@ -170,7 +227,22 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
               ))}
               {visible.length === 0 && (
                 <li className="px-5 py-8 text-center text-sm text-stone-400">
-                  No spots to show.
+                  {filtering ? (
+                    <>
+                      No spots match.{" "}
+                      <button
+                        onClick={() => {
+                          setSearch("");
+                          setBestTimeFilter("");
+                        }}
+                        className="text-orange-700 underline"
+                      >
+                        Clear filters
+                      </button>
+                    </>
+                  ) : (
+                    "No spots to show."
+                  )}
                 </li>
               )}
             </ul>

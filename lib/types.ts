@@ -25,6 +25,16 @@ export const DEFAULT_ZOOM = 11;
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8 MB
 export const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 
+/** Shared between the add-spot form's dropdown and the sidebar's filter. */
+export const BEST_TIME_OPTIONS = [
+  "Sunrise",
+  "Golden hour",
+  "Blue hour",
+  "Night",
+  "Midday",
+  "Monsoon mornings",
+] as const;
+
 /**
  * User uploads are downscaled to this width server-side before being stored
  * (see app/api/spots/route.ts), matching what scripts/seed.mjs already

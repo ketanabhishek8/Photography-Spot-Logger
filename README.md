@@ -111,14 +111,22 @@ and hands them to `MapExperience`. Leaflet touches `window` at import time, so t
 loaded through `dynamic(..., { ssr: false })` from inside a Client Component — `ssr: false`
 is not permitted in a Server Component in the App Router.
 
-**Logging a spot.** Click *Log a spot*, click the map to drop a pin, fill in the form and
-attach a photo. The browser POSTs multipart form data to `app/api/spots/route.ts`, which
-validates (type, 8 MB cap, coordinate range), uploads the image to Storage, then inserts the
-row. If the insert fails, the just-uploaded object is deleted so no orphan is left behind.
+**Logging a spot.** Click *Log a spot*, then either drop a pin manually or just choose a
+photo — `AddSpotForm.tsx` reads GPS EXIF data from the file (via `exifr`) and pre-fills the
+pin automatically if it finds any, falling back to a manual map click otherwise. The browser
+then POSTs multipart form data to `app/api/spots/route.ts`, which validates (type, 8 MB cap,
+coordinate range), uploads the image to Storage, then inserts the row. If the insert fails,
+the just-uploaded object is deleted so no orphan is left behind.
 
 **Near me.** The *Near me* button asks the browser for your location and calls the
 `spots_within_radius` Postgres function, which uses PostGIS `ST_DWithin` against a GiST
 index — the proximity search runs in the database, not in JavaScript.
+
+**Search/filter.** The sidebar's search box and best-time dropdown filter the
+already-loaded spots client-side (combines with "Near me"). The dropdown's options are
+derived from whatever `best_time` values are actually present in the data, not from the
+add-form's shorter preset list — the seeded spots use values like "Sunset" that aren't
+in that list.
 
 **Attribution.** The seeded photos are CC BY / CC BY-SA / CC0 / FAL licensed and all require
 credit, so the seeder stores the author and licence per row and the detail page displays them.

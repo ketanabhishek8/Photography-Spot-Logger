@@ -1,19 +1,56 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { ALLOWED_MIME, MAX_UPLOAD_BYTES } from "@/lib/types";
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import { ALLOWED_MIME, BEST_TIME_OPTIONS, MAX_UPLOAD_BYTES } from "@/lib/types";
 
 type Props = {
   draftPin: [number, number] | null;
   onRequestPick: () => void;
   onCancel: () => void;
   onCreated: () => void;
+  /** Called when a selected photo has GPS EXIF data, so the pin can be set automatically. */
+  onExifLocation: (lat: number, lng: number) => void;
 };
 
-export default function AddSpotForm({ draftPin, onRequestPick, onCancel, onCreated }: Props) {
+type ExifStatus = "idle" | "checking" | "found" | "none";
+
+export default function AddSpotForm({
+  draftPin,
+  onRequestPick,
+  onCancel,
+  onCreated,
+  onExifLocation,
+}: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [exifStatus, setExifStatus] = useState<ExifStatus>("idle");
+
+  async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    setFileName(file?.name ?? null);
+    setExifStatus("idle");
+    if (!file) return;
+
+    // Only auto-fill when nothing has been picked yet - a photo chosen after
+    // the user has already placed a pin shouldn't silently override it.
+    if (draftPin) return;
+
+    setExifStatus("checking");
+    try {
+      const exifr = (await import("exifr")).default;
+      const gps = await exifr.gps(file);
+      if (gps && Number.isFinite(gps.latitude) && Number.isFinite(gps.longitude)) {
+        onExifLocation(gps.latitude, gps.longitude);
+        setExifStatus("found");
+      } else {
+        setExifStatus("none");
+      }
+    } catch {
+      // Corrupt/unreadable EXIF block - not fatal, just means no auto-fill.
+      setExifStatus("none");
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,11 +124,9 @@ export default function AddSpotForm({ draftPin, onRequestPick, onCancel, onCreat
       <div>
         <label className="mb-1 block text-xs font-medium text-stone-600">Best light</label>
         <select name="best_time" className={field} defaultValue="Golden hour">
-          {["Sunrise", "Golden hour", "Blue hour", "Night", "Midday", "Monsoon mornings"].map(
-            (t) => (
-              <option key={t}>{t}</option>
-            ),
-          )}
+          {BEST_TIME_OPTIONS.map((t) => (
+            <option key={t}>{t}</option>
+          ))}
         </select>
       </div>
 
@@ -108,10 +143,13 @@ export default function AddSpotForm({ draftPin, onRequestPick, onCancel, onCreat
             accept="image/jpeg,image/png,image/webp"
             required
             className="hidden"
-            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+            onChange={handlePhotoChange}
           />
           {fileName ?? "Choose a JPEG, PNG or WebP (max 8 MB)"}
         </label>
+        {exifStatus === "checking" && (
+          <p className="mt-1 text-xs text-stone-400">Checking photo for location data...</p>
+        )}
       </div>
 
       <div className="rounded-lg bg-stone-50 p-3">
@@ -130,6 +168,12 @@ export default function AddSpotForm({ draftPin, onRequestPick, onCancel, onCreat
             ? `${draftPin[0].toFixed(5)}, ${draftPin[1].toFixed(5)}`
             : "Click the map to drop a pin"}
         </p>
+        {exifStatus === "found" && (
+          <p className="mt-1 text-xs text-emerald-700">📍 Filled in from the photo&apos;s location data</p>
+        )}
+        {exifStatus === "none" && !draftPin && (
+          <p className="mt-1 text-xs text-stone-400">No location data in that photo - pick it on the map.</p>
+        )}
       </div>
 
       {error && (
