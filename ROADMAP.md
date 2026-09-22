@@ -3,31 +3,36 @@
 Where the app stands and what's left, in the order we'll tackle it. Each stage has a
 "done when" so we know when to move on. Check items off as we go.
 
-**Current state:** app builds and lints clean, all pages/routes/components exist, the
-seed manifest is verified against Wikimedia (14/14 photos fetch correctly), and the map,
-add-spot form and API validation have all been exercised in-browser. Nothing has touched
-a real Supabase project yet — that's Stage 0.
+**Current state:** Stage 0 is done — a real Supabase project is live and seeded with all
+14 Mumbai spots, verified in-browser (correct thumbnails, correct pin locations across
+greater Mumbai). Now on Stage 1: re-verifying the rest of the app against that real data.
 
 ---
 
-## Stage 0 — Get a real Supabase project connected
-*Blocks everything below. Needs your Supabase account.*
+## Stage 0 — Get a real Supabase project connected ✅
+*Done. Project: `fmfweurpxxqhbwoghvsh` (South Asia/Mumbai region).*
 
-- [ ] Create the Supabase project at supabase.com/dashboard
-- [ ] Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor
-- [ ] Create the `spot-photos` public storage bucket
-- [ ] Copy `.env.example` → `.env.local`, fill in the three keys
-- [ ] `npm run seed` — write all 14 Mumbai spots for real
-- [ ] `npm run dev` — confirm the map opens populated, not the setup guide
+- [x] Create the Supabase project at supabase.com/dashboard
+- [x] Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor
+- [x] Create the `spot-photos` public storage bucket
+- [x] Copy `.env.example` → `.env.local`, fill in the three keys
+- [x] `npm run seed` — 14/14 Mumbai spots written for real
 
-**Done when:** the map shows 14 real markers over Mumbai with working photo thumbnails.
+**Hit along the way:** `service_role` had no table grants because "Automatically expose
+new tables" was off at project creation — RLS policies alone weren't enough, Postgres
+denies at the grant check before RLS is even considered. Fixed by adding explicit
+`grant all on spots to service_role` to `schema.sql` (now idempotent/re-runnable).
+
+**Done when:** the map shows 14 real markers over Mumbai with working photo thumbnails. ✅
+Confirmed in-browser at both desktop width (full map) and narrow width (list view) —
+thumbnails render correctly and pins sit in plausible real locations across the city.
 
 ---
 
 ## Stage 1 — End-to-end verification against the real project
 *Everything in the last session was tested against placeholder/mock data. This re-checks it for real.*
 
-- [ ] Open a few spot popups — thumbnails load from the actual Supabase public URL
+- [x] Open a few spot popups — thumbnails load from the actual Supabase public URL
 - [ ] Eyeball the 4 spots whose coordinates I estimated rather than pulled from
       Wikipedia (Flora Fountain, Bandra Fort, Dhobi Ghat, Worli Fort) — confirm the pins
       land on the right landmarks, nudge coordinates in `scripts/mumbai-spots.json` and
