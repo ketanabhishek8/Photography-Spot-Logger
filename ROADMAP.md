@@ -59,16 +59,24 @@ thumbnails render correctly and pins sit in plausible real locations across the 
 
 ---
 
-## Stage 2 — Deploy it somewhere reachable
-*Right now it only runs on localhost.*
+## Stage 2 — Deploy it somewhere reachable ✅
+*Live at **[photography-spot-logger.vercel.app](https://photography-spot-logger.vercel.app)**.*
 
 - [x] Push the repo to GitHub — [ketanabhishek8/Photography-Spot-Logger](https://github.com/ketanabhishek8/Photography-Spot-Logger)
-- [ ] Import into Vercel, set the three env vars (service-role key as a plain server var)
-- [ ] Confirm the deployed build shows the same 14 spots (seeding is a one-time local
-      step against the shared Supabase project — no need to re-seed from Vercel)
-- [ ] Smoke-test add-a-spot on the deployed URL, not just localhost
+- [x] Import into Vercel, set the three env vars (service-role key as a plain server var,
+      no Vercel↔Supabase marketplace integration — not needed since the app just reads
+      plain env vars, and that integration would push toward per-branch databases which
+      works against the single-shared-project design here)
+- [x] Confirm the deployed build shows the same 14 spots — verified in-browser, map and
+      list both render correctly with working thumbnails
+- [x] Smoke-test add-a-spot on the deployed URL — POSTed a real photo to the production
+      `/api/spots`, confirmed the 201, confirmed it appeared live ("15 spots logged"),
+      then cleaned it up back to 14
+- [x] Re-ran the key-leak check against the actual deployed JS bundles (not just the
+      local build this time) — downloaded all script chunks Vercel serves, confirmed the
+      real service-role secret is absent, anon key present as expected
 
-**Done when:** you have a public URL you can hand to someone else.
+**Done when:** you have a public URL you can hand to someone else. ✅
 
 ---
 

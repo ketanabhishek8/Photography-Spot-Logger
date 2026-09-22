@@ -1,5 +1,7 @@
 # Mumbai Photo Spots
 
+**Live:** [photography-spot-logger.vercel.app](https://photography-spot-logger.vercel.app)
+
 A photography-spot logger: browse photogenic locations on a map, and log new ones
 with a photo and coordinates.
 
@@ -146,6 +148,8 @@ credit, so the seeder stores the author and licence per row and the detail page 
 
 ## Deploying
 
-Push to GitHub, import the repo into Vercel, and set the three environment variables in
-project settings — `SUPABASE_SERVICE_ROLE_KEY` as a plain (non-`NEXT_PUBLIC_`) variable.
-Seeding only needs to happen once, from your machine, against the same Supabase project.
+Deployed on Vercel from the GitHub repo, with the three environment variables set in
+project settings (`SUPABASE_SERVICE_ROLE_KEY` as a plain, non-`NEXT_PUBLIC_` variable — no
+Vercel↔Supabase marketplace integration needed, since the app just reads plain env vars).
+Seeding only ran once, locally, against the shared Supabase project — Vercel serves
+whatever is already in that project, it doesn't need its own seed run.
