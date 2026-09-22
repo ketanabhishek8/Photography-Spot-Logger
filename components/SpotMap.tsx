@@ -104,12 +104,14 @@ export default function SpotMap({
       <TileLayer
         // Defaults to OpenStreetMap's own tile server, which needs no API key
         // but explicitly disallows heavy/commercial traffic per their usage
-        // policy (operations.osmfoundation.org/policies/tiles). Set
-        // NEXT_PUBLIC_TILE_URL/_ATTRIBUTION (e.g. to MapTiler or Carto) to
-        // switch providers with no code change once this gets real traffic.
+        // policy (operations.osmfoundation.org/policies/tiles). This app
+        // actually runs on MapTiler's free tier via NEXT_PUBLIC_TILE_URL/
+        // _ATTRIBUTION (no code change needed to switch providers - see
+        // .env.example for the verified URL format and setup notes).
         attribution={TILE_ATTRIBUTION}
         url={TILE_URL}
         maxZoom={19}
+        detectRetina // MapTiler's {r} URL token supports sharper high-DPI tiles
       />
       {markers}
       {draftPin && <Marker position={draftPin} icon={draftIcon} />}
