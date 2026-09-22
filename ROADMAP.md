@@ -62,7 +62,7 @@ thumbnails render correctly and pins sit in plausible real locations across the 
 ## Stage 2 — Deploy it somewhere reachable
 *Right now it only runs on localhost.*
 
-- [ ] Push the repo to GitHub
+- [x] Push the repo to GitHub — [ketanabhishek8/Photography-Spot-Logger](https://github.com/ketanabhishek8/Photography-Spot-Logger)
 - [ ] Import into Vercel, set the three env vars (service-role key as a plain server var)
 - [ ] Confirm the deployed build shows the same 14 spots (seeding is a one-time local
       step against the shared Supabase project — no need to re-seed from Vercel)
