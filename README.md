@@ -141,10 +141,15 @@ credit, so the seeder stores the author and licence per row and the detail page 
 
 - **No authentication.** Anyone can add a spot. RLS allows public `select` and `insert` but
   grants no `update` or `delete`, so the seeded spots cannot be edited or wiped anonymously.
-- **OpenStreetMap tiles** are used without an API key. That is fine for a demo, but their
-  usage policy rules out heavy traffic — switch to Carto or MapTiler before any real deploy.
-- Uploads are capped at 8 MB and are not re-compressed. Adding `sharp` to downscale in the
-  route handler would be the next improvement.
+- **OpenStreetMap tiles** are the default and need no API key, but their usage policy rules
+  out heavy traffic. Set `NEXT_PUBLIC_TILE_URL`/`NEXT_PUBLIC_TILE_ATTRIBUTION` (see
+  `.env.example`) to switch to MapTiler/Carto before sharing widely — no code change needed.
+- **Uploads** are capped at 8 MB, then downscaled server-side to 1600px wide with `sharp`
+  before being stored (EXIF-oriented first, so re-encoded photos don't come out sideways).
+- **Rate limiting** on `/api/spots` is a best-effort in-memory counter (10 requests per
+  caller per 10 minutes) — see the comment in `lib/rateLimit.ts` for why this isn't a real
+  distributed guarantee on Vercel's serverless functions, and what to reach for
+  (`@upstash/ratelimit`) if that's ever actually needed.
 
 ## Deploying
 

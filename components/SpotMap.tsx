@@ -7,6 +7,11 @@ import "leaflet/dist/leaflet.css";
 import { photoUrl } from "@/lib/supabase/client";
 import { DEFAULT_ZOOM, MUMBAI_CENTER, type Spot } from "@/lib/types";
 
+const TILE_URL = process.env.NEXT_PUBLIC_TILE_URL || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILE_ATTRIBUTION =
+  process.env.NEXT_PUBLIC_TILE_ATTRIBUTION ||
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
 /**
  * Leaflet's default marker icons are resolved by URL and bundlers rewrite those
  * paths, which silently produces invisible markers. Using a divIcon built from
@@ -97,10 +102,13 @@ export default function SpotMap({
       className={`h-full w-full ${pickingLocation ? "cursor-crosshair" : ""}`}
     >
       <TileLayer
-        // OpenStreetMap tiles need no API key. Attribution is required by their
-        // usage policy; a production deploy should move to Carto/MapTiler.
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        // Defaults to OpenStreetMap's own tile server, which needs no API key
+        // but explicitly disallows heavy/commercial traffic per their usage
+        // policy (operations.osmfoundation.org/policies/tiles). Set
+        // NEXT_PUBLIC_TILE_URL/_ATTRIBUTION (e.g. to MapTiler or Carto) to
+        // switch providers with no code change once this gets real traffic.
+        attribution={TILE_ATTRIBUTION}
+        url={TILE_URL}
         maxZoom={19}
       />
       {markers}

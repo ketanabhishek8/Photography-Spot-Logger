@@ -80,23 +80,36 @@ thumbnails render correctly and pins sit in plausible real locations across the 
 
 ---
 
-## Stage 3 — Harden it
+## Stage 3 — Harden it ✅
 *Things that are fine for a demo but would bite in real use.*
 
-- [ ] **Image compression on upload.** User photos go into Storage unmodified today
-      (capped at 8 MB but not resized). Add `sharp` in `app/api/spots/route.ts` to
-      downscale to ~1600px, matching what the seeder already does for Commons photos.
-- [ ] **Rate-limit `/api/spots`.** Nothing currently stops someone from scripting
-      hundreds of inserts — there's no auth and no throttle. Options: Vercel's built-in
-      rate limiting, or a simple per-IP counter.
-- [ ] **OSM tile usage.** `SpotMap.tsx` hits `tile.openstreetmap.org` directly, which is
-      fine at demo traffic but violates OSM's usage policy at any real scale. Move to a
-      hosted provider (MapTiler, Carto) before sharing widely.
-- [ ] **Error boundaries.** A failed Supabase call in `MapExperience` currently just
-      shows a note in the sidebar; a thrown error elsewhere would show Next's default
-      error page. Add an `app/error.tsx`.
+- [x] **Image compression on upload.** Added `sharp` in `app/api/spots/route.ts`:
+      auto-orients via EXIF then downscales to 1600px wide (`withoutEnlargement`, so
+      small photos are untouched), matching what the seeder already does for Commons
+      photos. Tested with a real 5472x3648 / 2.6MB JPEG - stored object came back
+      1600x1067 / 404KB. Verified a 400x300 photo was *not* upscaled.
+- [x] **Rate-limit `/api/spots`.** Added `lib/rateLimit.ts` - an in-memory sliding
+      window, 10 requests per caller (by IP) per 10 minutes. Tested live: 10 requests
+      succeeded, the 11th got `429` with a correct `Retry-After` header. **Caveat, noted
+      in the code:** this is best-effort on Vercel's serverless functions, since the Map
+      lives in one instance's memory and isn't shared across instances or survives cold
+      starts. It reliably throttles a single script hammering the endpoint (very likely
+      to hit the same warm instance) but isn't a real distributed guarantee. A
+      production deployment that actually needs one should put this behind Upstash
+      Redis (`@upstash/ratelimit`) or Vercel's own Firewall rate limiting - both need a
+      new account, so left as a follow-up rather than done now.
+- [x] **OSM tile usage.** `SpotMap.tsx` now reads `NEXT_PUBLIC_TILE_URL` /
+      `NEXT_PUBLIC_TILE_ATTRIBUTION` with the OSM tile server as the default fallback -
+      switching to a hosted provider (MapTiler, Carto) before sharing widely is now an
+      env var away, no code change, once you have a key for one (documented in
+      `.env.example`).
+- [x] **Error boundaries.** Added `app/error.tsx` (catches errors below the root layout)
+      and `app/global-error.tsx` (catches errors in the root layout itself, per Next's
+      App Router convention - it needs its own `<html>`/`<body>` since it replaces the
+      whole document). Verified live by temporarily forcing a throw in `page.tsx` -
+      showed the styled "Something went wrong" screen with a working "Try again" button.
 
-**Done when:** the app survives someone actively poking at it, not just the happy path.
+**Done when:** the app survives someone actively poking at it, not just the happy path. ✅
 
 ---
 

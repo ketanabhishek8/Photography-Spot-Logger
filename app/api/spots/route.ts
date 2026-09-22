@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALLOWED_MIME, MAX_UPLOAD_BYTES, PHOTO_BUCKET, type Spot } from "@/lib/types";
+import { checkRateLimit, clientKey } from "@/lib/rateLimit";
+import {
+  ALLOWED_MIME,
+  MAX_UPLOAD_BYTES,
+  PHOTO_BUCKET,
+  UPLOAD_TARGET_WIDTH,
+  type Spot,
+} from "@/lib/types";
 
-// The Supabase upload uses Node APIs, so pin this handler to the Node runtime.
+// The Supabase upload and sharp both need Node APIs, so pin this handler to
+// the Node runtime rather than the default Edge-eligible one.
 export const runtime = "nodejs";
 
 const EXT: Record<string, string> = {
@@ -22,6 +31,14 @@ function bad(message: string) {
  * leaves the server. The browser only ever holds the anon key.
  */
 export async function POST(request: Request) {
+  const limit = checkRateLimit(clientKey(request));
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many spots logged from this connection. Try again in a few minutes." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -58,7 +75,27 @@ export async function POST(request: Request) {
   }
 
   const photoPath = `user/${crypto.randomUUID()}.${EXT[photo.type]}`;
-  const bytes = new Uint8Array(await photo.arrayBuffer());
+  const original = new Uint8Array(await photo.arrayBuffer());
+
+  // Downscale before storing - phone photos routinely run 5-12 MB, and only
+  // the on-screen thumbnail/detail view ever needs to show them. .rotate()
+  // with no args auto-applies the EXIF orientation tag before the encode
+  // strips metadata, so re-encoded photos don't come out sideways.
+  let bytes: Uint8Array;
+  try {
+    const resized = sharp(original)
+      .rotate()
+      .resize({ width: UPLOAD_TARGET_WIDTH, withoutEnlargement: true });
+
+    bytes =
+      photo.type === "image/png"
+        ? await resized.png({ compressionLevel: 8 }).toBuffer()
+        : photo.type === "image/webp"
+          ? await resized.webp({ quality: 82 }).toBuffer()
+          : await resized.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+  } catch {
+    return bad("That file isn't a readable image.");
+  }
 
   const { error: uploadError } = await supabase.storage
     .from(PHOTO_BUCKET)
