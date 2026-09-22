@@ -167,6 +167,11 @@ search/filter for this pass; the rest stay in the backlog.*
       flagged for OSM tiles in Stage 3, rather than the handful of one-off calls used
       during Stage 1's coordinate verification.
 
+**Verified live on Vercel** after pushing (deployed cleanly this time - the git identity
+fix from Stage 3 held): confirmed the search input is actually present in production's
+HTML and re-ran the search test directly against the deployed URL ("elephanta" -> "1 of
+14 spots" -> Elephanta Caves).
+
 ---
 
 ## Stage 5 — Optional: add real auth
