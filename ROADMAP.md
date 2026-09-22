@@ -78,6 +78,21 @@ thumbnails render correctly and pins sit in plausible real locations across the 
 
 **Done when:** you have a public URL you can hand to someone else. ✅
 
+**Gotcha hit mid-Stage-3:** two pushed commits sat as **Blocked** in Vercel's deployment
+list instead of going live, with the reason "Vercel couldn't find a Git account for the
+commit author - Hobby teams do not support collaboration." The repo's local git identity
+had been auto-generated as `tsurai@<hostname>.local` (not a real address), which doesn't
+match any GitHub account, so Vercel's Hobby-plan check treated pushes as coming from an
+unrecognized collaborator and refused to auto-promote them - even though the very first
+deployment (the one made by manually clicking Deploy during Vercel's import wizard) had
+gone through fine, since that path doesn't run the same check. Fixed by setting this
+repo's `git config user.email` to the real GitHub-linked noreply address
+(`<id>+<username>@users.noreply.github.com`, visible on any commit made through GitHub's
+own web UI) and pushing a fresh commit - Vercel checks the pushed commit's own author, not
+its ancestors, so this was enough without rewriting history. Worth knowing if a future
+push ever silently stops reaching production: check the Deployments tab for "Blocked"
+before assuming the push itself failed.
+
 ---
 
 ## Stage 3 — Harden it ✅
