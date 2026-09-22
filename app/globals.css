@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 :root {
+  /*
+   * This app has no real dark theme - the sidebar, forms and popups all
+   * hardcode light (stone/white) colors with no dark: variants. Declaring
+   * color-scheme: light keeps the browser's native form-control rendering
+   * (inputs, selects) in light mode too; without it, a dark-mode browser
+   * paints those controls with light text on top of our explicit bg-white,
+   * making anything typed in a search box or form field unreadable.
+   */
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -11,13 +20,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
