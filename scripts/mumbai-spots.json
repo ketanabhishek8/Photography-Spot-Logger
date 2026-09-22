@@ -33,7 +33,7 @@
     "longitude": 72.8172,
     "best_time": "Blue hour",
     "description": "Cable-stayed bridge across Mahim Bay. Shoot the cable geometry from Bandra Bandstand or the Worli Sea Face promenade.",
-    "commons_file": "Bandra–Worli Sea Link.jpg"
+    "commons_file": "Bandra\u2013Worli Sea Link.jpg"
   },
   {
     "slug": "haji-ali-dargah",
@@ -92,8 +92,8 @@
   {
     "slug": "flora-fountain",
     "name": "Flora Fountain",
-    "latitude": 18.9322,
-    "longitude": 72.8311,
+    "latitude": 18.9324959,
+    "longitude": 72.8315005,
     "best_time": "Golden hour",
     "description": "Carved Portland stone fountain at Hutatma Chowk. Warm evening light plus long exposures on the traffic works well here.",
     "commons_file": "Mumbai 03-2016 72 Flora Fountain.jpg"
@@ -101,8 +101,8 @@
   {
     "slug": "bandra-fort",
     "name": "Bandra Fort (Castella de Aguada)",
-    "latitude": 19.043,
-    "longitude": 72.819,
+    "latitude": 19.0418641,
+    "longitude": 72.8183782,
     "best_time": "Sunset",
     "description": "Portuguese watchtower ruin looking out over the Sea Link. The stone arches make a natural frame for the bridge.",
     "commons_file": "Bandra-fort-mumbai.jpg"
@@ -110,8 +110,8 @@
   {
     "slug": "dhobi-ghat",
     "name": "Dhobi Ghat",
-    "latitude": 18.9866,
-    "longitude": 72.8231,
+    "latitude": 18.9826851,
+    "longitude": 72.8252534,
     "best_time": "Mid morning",
     "description": "Open-air laundry at Mahalaxmi, best seen from the bridge above. Ask before photographing people at work.",
     "commons_file": "Dhobi ghat Mumbai.jpg"
@@ -119,8 +119,8 @@
   {
     "slug": "worli-fort",
     "name": "Worli Fort",
-    "latitude": 19.0,
-    "longitude": 72.814,
+    "latitude": 19.0237486,
+    "longitude": 72.8168362,
     "best_time": "Sunset",
     "description": "Small hilltop fort above Worli Koliwada fishing village, with the Sea Link sweeping across the background.",
     "commons_file": "Worli Fort Mumbai.jpg"

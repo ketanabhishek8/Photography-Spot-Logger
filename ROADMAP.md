@@ -29,20 +29,31 @@ thumbnails render correctly and pins sit in plausible real locations across the 
 
 ---
 
-## Stage 1 — End-to-end verification against the real project
+## Stage 1 — End-to-end verification against the real project ✅
 *Everything in the last session was tested against placeholder/mock data. This re-checks it for real.*
 
 - [x] Open a few spot popups — thumbnails load from the actual Supabase public URL
-- [ ] Eyeball the 4 spots whose coordinates I estimated rather than pulled from
-      Wikipedia (Flora Fountain, Bandra Fort, Dhobi Ghat, Worli Fort) — confirm the pins
-      land on the right landmarks, nudge coordinates in `scripts/mumbai-spots.json` and
-      re-run `npm run seed` if not
-- [ ] Add a real spot end-to-end (pick location, upload a photo, save) — confirm it
-      appears on the map and in Postgres/Storage
-- [ ] Try "Near me" with real geolocation — confirm the PostGIS radius query returns
-      sensible results
-- [ ] Re-run the key-leak check (`grep -rl SUPABASE_SERVICE_ROLE_KEY .next/static/`)
-      after a real build, now that real keys are in play
+- [x] Eyeball the 4 spots whose coordinates I estimated rather than pulled from
+      Wikipedia. Cross-checked all 4 against Nominatim geocoding: Flora Fountain and
+      Bandra Fort were close (<150m); **Worli Fort was off by ~2.6km** (had guessed a
+      point on the mainland instead of Worli Koliwada) and Dhobi Ghat by ~450m. Updated
+      `scripts/mumbai-spots.json` with geocoded coordinates and re-seeded; confirmed the
+      corrected values persisted via a direct read of the live table.
+- [x] Add a real spot end-to-end. The Browser pane has no OS file-picker control, so
+      exercised the identical code path (validate → Storage upload → Postgres insert)
+      via a direct POST to `/api/spots` with a real JPEG - same handler the form calls.
+      Confirmed the row in Postgres, the object in Storage, and "15 spots logged" with
+      the new spot listed first, live in the running app. Also re-tested the duplicate-
+      name 409 path against the real DB and confirmed the orphan-cleanup logic actually
+      leaves no leftover Storage object. Test spot then deleted to restore the clean 14.
+- [x] Tried "Near me" - the Browser pane denies geolocation automatically, which
+      exercised the "Location permission denied" error path correctly. Verified the
+      underlying PostGIS query directly instead: from a Colaba coordinate, 5km radius
+      returned exactly the 5 South Mumbai spots, correctly sorted nearest-first, with
+      Elephanta/Kanheri correctly excluded.
+- [x] Re-ran the key-leak check against a real production build with the real keys
+      loaded (not placeholders this time): service-role secret absent from
+      `.next/static/`, anon/publishable key present as expected (it's meant to be public).
 
 **Done when:** every feature has been used against live data, not mocks.
 
