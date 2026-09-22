@@ -93,6 +93,13 @@ its ancestors, so this was enough without rewriting history. Worth knowing if a 
 push ever silently stops reaching production: check the Deployments tab for "Blocked"
 before assuming the push itself failed.
 
+**Resolved:** the identity-corrected commit deployed and was promoted to Production
+automatically. Re-verified Stage 3 directly against the live URL afterward (not just
+trusting the dashboard's "Ready" label) - uploaded a real 4000x3000 JPEG through the
+production `/api/spots` and confirmed the stored object came back 1600x1200, proving
+`sharp` genuinely runs on Vercel's serverless runtime, then cleaned up all test spots
+back to the real 14.
+
 ---
 
 ## Stage 3 — Harden it ✅
