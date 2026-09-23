@@ -13,9 +13,9 @@ Built as a cloud mini-project, so each tier maps onto a distinct cloud service:
 | Database | Supabase Postgres + PostGIS | name, description, latitude/longitude, attribution |
 | Frontend | Next.js 16 + React 19 + Leaflet/OpenStreetMap | the map UI |
 
-The app ships with **14 real Mumbai spots** pre-loaded — Gateway of India, Marine Drive,
-CSMT, Elephanta, Kanheri and more — seeded with freely-licensed photographs from Wikimedia
-Commons.
+The app ships with **22 real Mumbai spots** pre-loaded — Gateway of India, Marine Drive,
+CSMT, Elephanta, Kanheri, Siddhivinayak Temple, Juhu Beach and more — seeded with
+freely-licensed photographs from Wikimedia Commons.
 
 ---
 
@@ -92,7 +92,7 @@ Then write it to your project:
 npm run seed
 ```
 
-Expect 14 `ok` lines. Re-running is safe — `name` is unique and the script upserts.
+Expect 22 `ok` lines. Re-running is safe — `name` is unique and the script upserts.
 
 ### 6. Run it
 

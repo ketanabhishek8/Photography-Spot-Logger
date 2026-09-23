@@ -124,5 +124,77 @@
     "best_time": "Sunset",
     "description": "Small hilltop fort above Worli Koliwada fishing village, with the Sea Link sweeping across the background.",
     "commons_file": "Worli Fort Mumbai.jpg"
+  },
+  {
+    "slug": "siddhivinayak-temple",
+    "name": "Siddhivinayak Temple",
+    "latitude": 19.0158935,
+    "longitude": 72.8309199,
+    "best_time": "Morning",
+    "description": "Domed Ganesh temple in Prabhadevi, gopuram-style spire against open sky. Arrive before the queues build up for a clean shot of the facade.",
+    "commons_file": "Shree Siddhivinayak Temple Mumbai.jpg"
+  },
+  {
+    "slug": "rajabai-clock-tower",
+    "name": "Rajabai Clock Tower",
+    "latitude": 18.9296662,
+    "longitude": 72.8300363,
+    "best_time": "Golden hour",
+    "description": "Venetian Gothic clock tower on the Fort campus of Mumbai University. Shoot from across the Oval Maidan so the palms frame the base.",
+    "commons_file": "Rajabai Clock Tower, Mumbai (31 August 2008).jpg"
+  },
+  {
+    "slug": "csmvs-museum",
+    "name": "Chhatrapati Shivaji Maharaj Vastu Sangrahalaya",
+    "latitude": 18.9269268,
+    "longitude": 72.8326498,
+    "best_time": "Late morning",
+    "description": "Indo-Saracenic domed museum building (formerly Prince of Wales Museum), fronted by a palm-lined lawn in Kala Ghoda.",
+    "commons_file": "Prince of Wales Museum, Mumbai 01.jpg"
+  },
+  {
+    "slug": "hanging-gardens",
+    "name": "Hanging Gardens",
+    "latitude": 18.9566917,
+    "longitude": 72.8049037,
+    "best_time": "Sunset",
+    "description": "Terraced hedge garden on Malabar Hill, across the road from Kamala Nehru Park. West-facing, so it catches the sunset over the Arabian Sea.",
+    "commons_file": "Mumbai 03-2016 22 Hanging Garden.jpg"
+  },
+  {
+    "slug": "girgaon-chowpatty",
+    "name": "Girgaon Chowpatty",
+    "latitude": 18.9523652,
+    "longitude": 72.8219144,
+    "best_time": "Sunset",
+    "description": "The beach at the southern end of Marine Drive - kite flyers, bhelpuri stalls and the Queen's Necklace lighting up as the sky turns.",
+    "commons_file": "Girgaon Chowpatty Beach.jpg"
+  },
+  {
+    "slug": "juhu-beach",
+    "name": "Juhu Beach",
+    "latitude": 19.1026521,
+    "longitude": 72.8246792,
+    "best_time": "Evening",
+    "description": "Long suburban beach backed by the northern skyline. Wide and uncrowded enough for a clean horizon shot outside weekend evenings.",
+    "commons_file": "Juhu beach 2019.jpg"
+  },
+  {
+    "slug": "horniman-circle-garden",
+    "name": "Horniman Circle Garden",
+    "latitude": 18.9320017,
+    "longitude": 72.8350241,
+    "best_time": "Early morning",
+    "description": "Circular colonial-era garden ringed by Fort's grandest facades. Quiet and shaded before the office crowds arrive for lunch.",
+    "commons_file": "A bench in Horniman Circle Garden, Mumbai.jpg"
+  },
+  {
+    "slug": "mount-mary-church",
+    "name": "Mount Mary Church",
+    "latitude": 19.0465767,
+    "longitude": 72.8226396,
+    "best_time": "Golden hour",
+    "description": "Twin-spired basilica on a hilltop above Bandra, overlooking the sea. The facade catches warm light well before sunset.",
+    "commons_file": "Mount Mary Church (Bombay).jpg"
   }
 ]

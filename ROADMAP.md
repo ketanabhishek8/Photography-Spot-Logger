@@ -6,11 +6,12 @@ Where the app stands and what's left, in the order we'll tackle it. Each stage h
 **Current state:** Stages 0-4 done. Edit/delete own spots shipped without real
 accounts - session-owned via an anonymous cookie, not Stage 5's auth (the user
 explicitly chose to skip accounts; Stage 5 is now a non-goal, not a future stage).
-Marker clustering remains deferred (not needed yet at 14 spots). Several fixes landed
-outside the stage sequence: invisible input text on dark-mode browsers, a switch from
-OpenStreetMap to MapTiler tiles, seed-photo compression, and a Vercel function-region
-fix for the actual "map loads slowly" cause - see "Post-Stage-4 fixes" and
-"Edit/delete own spots" below.
+The seed set has grown from 14 to **22** real Mumbai spots. Marker clustering remains
+deferred (not needed yet at this count). Several fixes landed outside the stage
+sequence: invisible input text on dark-mode browsers, a switch from OpenStreetMap to
+MapTiler tiles, seed-photo compression, and a Vercel function-region fix for the
+actual "map loads slowly" cause - see "Post-Stage-4 fixes", "Edit/delete own spots"
+and "More seed spots" below.
 
 ---
 
@@ -164,7 +165,8 @@ search/filter for this pass; the rest stay in the backlog.*
       (`aria-pressed` + highlight) tracks correctly, confirmed the empty-state message
       renders in gallery mode too, confirmed the toggle correctly hides/reappears
       around the add-spot flow.
-- [ ] **Marker clustering.** Skipped - not needed at 14 spots, per the note below.
+- [ ] **Marker clustering.** Skipped - not needed at 14 spots, per the note below
+      (still true at 22, after "More seed spots" below).
       Worth adding once user-submitted spots push the count into the hundreds
       (`react-leaflet-cluster` or similar). *Explicitly deferred again rather than
       built ahead of need, when re-asked.*
@@ -311,6 +313,42 @@ upload/sharp/orphan-cleanup path `AddSpotForm`/`app/api/spots/route.ts` already 
 browser in a different profile, means those spots are no longer editable from there -
 there's nothing to log back into. That trade-off was the explicit point of choosing this
 over Stage 5.
+
+---
+
+## More seed spots — 14 → 22
+*User asked to add more, once the roadmap itself was otherwise done.*
+
+- [x] **8 new real Mumbai spots**, same standard as the original 14: real coordinates
+      (Nominatim geocoding, not guessed), a real CC-licensed Wikimedia Commons photo per
+      spot, checked before adding rather than after. Added: Siddhivinayak Temple, Rajabai
+      Clock Tower, Chhatrapati Shivaji Maharaj Vastu Sangrahalaya (the museum formerly
+      called Prince of Wales Museum), Hanging Gardens, Girgaon Chowpatty, Juhu Beach,
+      Horniman Circle Garden and Mount Mary Church - `scripts/mumbai-spots.json` now
+      holds 22 entries.
+- [x] **Verified each photo actually shows its subject before adding it to the
+      manifest**, not just that the Commons API returned a 200 and a plausible license -
+      the same discipline as [[verify-tile-api-by-content]], applied here to content
+      instead of an API response. Worth it: the first pick for Horniman Circle Garden
+      ("Horniman circle garden mumbai.jpg") turned out to be a street-corner building
+      shot with no garden in it at all, caught by actually looking at the downloaded
+      image and swapped for "A bench in Horniman Circle Garden, Mumbai.jpg" instead,
+      which genuinely shows the garden.
+- [x] **Also hit real Wikimedia API rate limits while doing this research** (curl
+      returning literal Wikimedia "too many requests" HTML pages, and separately a 400
+      from a hand-guessed thumbnail URL that wasn't actually rate limiting - both had to
+      be diagnosed from the raw response, not assumed) - paced requests and retried
+      rather than dismissing failures as one-offs.
+- [x] `npm run seed --dry-run` confirmed all 22 entries (14 existing + 8 new) fetch and
+      compress cleanly - largest new photo 432 KB after the sharp pipeline, consistent
+      with the existing set - before writing anything to the live project.
+- [x] Seeded for real: `22/22 seeded. Table now holds 22 spots.` Verified live in the
+      Browser pane - correct thumbnails, correct count, new pins land in geographically
+      sensible places (Juhu Beach north of Bandra, the Fort-area cluster - Rajabai,
+      CSMVS, Horniman - tight together as expected), and the best-time filter picked up
+      "Evening" (a new value none of the original 14 used) automatically, confirming the
+      Stage-4 fix that derives filter options from live data instead of a fixed list is
+      still doing its job.
 
 ---
 
