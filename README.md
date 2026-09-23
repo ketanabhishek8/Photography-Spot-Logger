@@ -149,9 +149,11 @@ credit, so the seeder stores the author and licence per row and the detail page 
 
 - **No authentication.** Anyone can add a spot. RLS allows public `select` and `insert` but
   grants no `update` or `delete`, so the seeded spots cannot be edited or wiped anonymously.
-- **OpenStreetMap tiles** are the default and need no API key, but their usage policy rules
-  out heavy traffic. Set `NEXT_PUBLIC_TILE_URL`/`NEXT_PUBLIC_TILE_ATTRIBUTION` (see
-  `.env.example`) to switch to MapTiler/Carto before sharing widely — no code change needed.
+- **Map tiles** come from MapTiler (`NEXT_PUBLIC_TILE_URL`/`NEXT_PUBLIC_TILE_ATTRIBUTION` —
+  see `.env.example`), free tier, no credit card, key restricted by HTTP origin. Falls back
+  to OpenStreetMap's own tile server if those env vars are unset, so cloning the repo
+  without a MapTiler key still works, just plainer. Whichever provider is active, the URL
+  is swappable with no code change.
 - **Uploads** are capped at 8 MB, then downscaled server-side to 1600px wide with `sharp`
   before being stored (EXIF-oriented first, so re-encoded photos don't come out sideways).
 - **Rate limiting** on `/api/spots` is a best-effort in-memory counter (10 requests per

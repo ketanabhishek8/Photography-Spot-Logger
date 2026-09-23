@@ -3,9 +3,11 @@
 Where the app stands and what's left, in the order we'll tackle it. Each stage has a
 "done when" so we know when to move on. Check items off as we go.
 
-**Current state:** Stage 0 is done — a real Supabase project is live and seeded with all
-14 Mumbai spots, verified in-browser (correct thumbnails, correct pin locations across
-greater Mumbai). Now on Stage 1: re-verifying the rest of the app against that real data.
+**Current state:** Stages 0-3 done in full; Stage 4 done for the two features picked
+(EXIF auto-fill, search/filter) - gallery view, clustering and edit/delete remain
+unbuilt backlog. Stage 5 (auth) not started, not currently planned. Two fixes landed
+outside the stage sequence since: an invisible-input-text bug on dark-mode browsers, and
+a switch from OpenStreetMap to MapTiler tiles - see "Post-Stage-4 fixes" below.
 
 ---
 
@@ -171,6 +173,34 @@ search/filter for this pass; the rest stay in the backlog.*
 fix from Stage 3 held): confirmed the search input is actually present in production's
 HTML and re-ran the search test directly against the deployed URL ("elephanta" -> "1 of
 14 spots" -> Elephanta Caves).
+
+---
+
+## Post-Stage-4 fixes
+*User-reported and user-requested, landed between the numbered stages.*
+
+- [x] **Invisible input text on dark-mode browsers.** Every input/select forced
+      `bg-white` but the app had no `color-scheme` declared, so a dark-mode browser
+      painted native form controls with light text - unreadable against the forced
+      white background. Root cause was a vestigial `prefers-color-scheme: dark` swap
+      inherited from the create-next-app starter template; the rest of the UI never
+      implemented a real dark theme. Fixed by declaring `color-scheme: light` and
+      dropping the dead block. Verified by emulating both colour schemes in the Browser
+      pane against both localhost and the live deployment.
+- [x] **OpenStreetMap → MapTiler tiles.** User asked about Google Maps; the real ask
+      turned out to be "free, no billing account, nicer than plain OSM." First attempt
+      (Carto's free basemaps) was wrong - verified only by HTTP status/size, and it
+      turned out every Carto style now shows an "API KEY REQUIRED" watermark at every
+      zoom level, a real policy change. Reverted before committing. MapTiler's free
+      tier genuinely needs no card (verified against their own plans page), and the
+      correct current raster tile URL format was cross-checked against their live docs
+      (`streets-v4` with a `/256/` tile-size segment - an earlier guess at `streets-v2`
+      was already stale). The key is a `NEXT_PUBLIC_` var by design, restricted by
+      HTTP origin (`localhost:3000`, the production domain) rather than kept secret,
+      the same pattern Google Maps keys use. Verified live on both localhost and
+      production by fetching real Mumbai tiles directly and confirming the app's own
+      attribution text updates. Along the way, also caught and fixed the Supabase
+      service-role key being stored as Vercel's "Config" type instead of "Secret".
 
 ---
 
