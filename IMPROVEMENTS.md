@@ -69,7 +69,7 @@ both correctly rejected with 400. Also added `not valid` `CHECK` constraints in
 
 ## P1 — Reliability
 
-### 4. Add automated tests
+### 4. Add automated tests ✅ done
 **Problem.** No test runner, no `test` script, not one test file. Every check so far was
 done by hand in a browser.
 
@@ -85,12 +85,46 @@ outage was caught by luck on a reload, not by a check.
 - One integration test against a Supabase branch or local stack: selecting
   `owner_token` with the anon key must fail.
 
-### 5. Add CI
+**Done:** Vitest added (`vitest.config.mts`), 29 tests across three files -
+`app/api/spots/route.test.ts` (POST validation, no DB needed - all rejected before the
+route ever calls Supabase), `app/api/spots/[id]/route.test.ts` (PATCH/DELETE validation,
+plus real ownership tests against the live project: wrong token → 403, right token →
+200 and the row genuinely changes, a seed row → 403 even with a token that matches),
+and `tests/security.test.ts` (the anon key itself: `owner_token` unselectable, a direct
+insert/update rejected). Credential-gated tests skip via `describe.skipIf` when
+Supabase creds aren't set, rather than failing - `server-only` (which throws outside an
+actual Next.js build) is stubbed via a vitest resolve alias so route handlers can be
+imported directly.
+
+Caught a real bug in the test suite itself while writing it: the anon-insert-rejection
+test initially set `Prefer: return=representation`, which makes PostgREST try to read
+the row back as part of the same statement - and that read fails for the unrelated
+reason `owner_token` is column-restricted, masking whether the insert itself was
+rejected. The test passed even while a real `curl` proved a plain anon insert still
+succeeded. Fixed by dropping that header so the test isolates the actual privilege
+being checked, then re-ran it - **at that point it correctly failed**, since this
+project's live database hadn't had the P0 #1 migration applied yet. That's the honest
+current state as of this writing: `npm test` shows one real, expected failure
+(`a direct anon insert is rejected`) until the schema.sql migration from the quick-wins
+section above is run in the SQL editor - a good sign the test is trustworthy, not a bug
+to paper over.
+
+### 5. Add CI ✅ done
 **Problem.** No `.github/workflows`. Lint, typecheck and build only run when someone
 remembers to run them locally.
 
 **Fix.** A GitHub Actions workflow on push/PR that runs `npm ci`, `npm run lint`,
 `npm run build` and the tests from #4.
+
+**Done:** `.github/workflows/ci.yml`. Lint/build/test run on every push and PR to
+`main`. Confirmed `npm run build` succeeds with zero env vars present (temporarily moved
+`.env.local` aside and rebuilt), so CI needs no secrets just to build - Next.js never
+touches Supabase during a `force-dynamic` page's build, only at request time. `npm test`
+also needs no secrets to run (the credential-gated tests just skip), but the workflow
+wires up `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`/
+`SUPABASE_SERVICE_ROLE_KEY` from repo secrets if added, so the full suite - including
+the live-project ownership and grant checks - runs automatically once they're
+configured.
 
 ### 6. Stop hiding read failures as "0 spots" ✅ done
 **Problem.** `fetchSpots()` in `lib/supabase/server.ts` logs any error and returns `[]`.

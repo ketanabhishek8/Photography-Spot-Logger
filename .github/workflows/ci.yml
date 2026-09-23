@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+      # Repo secrets are optional here, not required. Without them, every
+      # test that needs the live Supabase project (the ownership checks in
+      # app/api/spots/[id]/route.test.ts, and all of tests/security.test.ts -
+      # the one that actually catches a regressed owner_token grant or a
+      # reopened anon-insert hole) skips itself via describe.skipIf and this
+      # step still passes, just with narrower coverage: the pure input
+      # validation tests. Add NEXT_PUBLIC_SUPABASE_URL,
+      # NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY as repo
+      # secrets (Settings -> Secrets and variables -> Actions) to run the
+      # full suite against the real project on every push.
+      - run: npm test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

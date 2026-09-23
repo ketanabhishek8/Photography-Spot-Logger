@@ -153,6 +153,7 @@ upload/resize path, and "delete, then re-log it" already covers that.
 | `npm run seed` | download Commons photos → Storage → Postgres |
 | `npm run seed:check` | dry run: verify the manifest without writing |
 | `npm run lint` | eslint |
+| `npm test` | Vitest - API route validation always, plus ownership/grant checks against the live Supabase project when `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` are set (`.env.local` locally, repo secrets in CI) |
 
 ---
 
