@@ -11,6 +11,8 @@ import {
   MAX_UPLOAD_BYTES,
   PHOTO_BUCKET,
   PUBLIC_SPOT_COLUMNS,
+  THUMBNAIL_TARGET_WIDTH,
+  thumbPath,
   UPLOAD_TARGET_WIDTH,
   type Spot,
 } from "@/lib/types";
@@ -27,6 +29,16 @@ const EXT: Record<string, string> = {
 
 function bad(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
+}
+
+/** Resize `original` to `width` and encode it in the same format as `mime`. */
+async function resizeAndEncode(original: Uint8Array, width: number, mime: string) {
+  const resized = sharp(original).rotate().resize({ width, withoutEnlargement: true });
+  return mime === "image/png"
+    ? resized.png({ compressionLevel: 8 }).toBuffer()
+    : mime === "image/webp"
+      ? resized.webp({ quality: 82 }).toBuffer()
+      : resized.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
 }
 
 /**
@@ -85,42 +97,46 @@ export async function POST(request: NextRequest) {
   }
 
   const photoPath = `user/${crypto.randomUUID()}.${EXT[photo.type]}`;
+  const thumbnailPath = thumbPath(photoPath);
   const original = new Uint8Array(await photo.arrayBuffer());
 
   // Downscale before storing - phone photos routinely run 5-12 MB, and only
-  // the on-screen thumbnail/detail view ever needs to show them. .rotate()
-  // with no args auto-applies the EXIF orientation tag before the encode
-  // strips metadata, so re-encoded photos don't come out sideways.
+  // the detail page ever needs to show the full size. .rotate() with no
+  // args auto-applies the EXIF orientation tag before the encode strips
+  // metadata, so re-encoded photos don't come out sideways. A second,
+  // smaller thumbnail derivative is generated the same way, for every place
+  // that only ever displays a photo in a 56-224px box (list, gallery, map
+  // popup) - see THUMBNAIL_TARGET_WIDTH in lib/types.ts.
   let bytes: Uint8Array;
+  let thumbBytes: Uint8Array;
   try {
-    const resized = sharp(original)
-      .rotate()
-      .resize({ width: UPLOAD_TARGET_WIDTH, withoutEnlargement: true });
-
-    bytes =
-      photo.type === "image/png"
-        ? await resized.png({ compressionLevel: 8 }).toBuffer()
-        : photo.type === "image/webp"
-          ? await resized.webp({ quality: 82 }).toBuffer()
-          : await resized.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+    [bytes, thumbBytes] = await Promise.all([
+      resizeAndEncode(original, UPLOAD_TARGET_WIDTH, photo.type),
+      resizeAndEncode(original, THUMBNAIL_TARGET_WIDTH, photo.type),
+    ]);
   } catch {
     return bad("That file isn't a readable image.");
   }
 
-  const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(photoPath, bytes, {
+  const cacheOptions = {
     contentType: photo.type,
     upsert: false,
-    // photoPath is a fresh UUID per upload and is never overwritten, so this
+    // Both paths are a fresh UUID per upload and never overwritten, so this
     // is safe to cache for as long as browsers will keep it (Supabase's
     // default is only 1hr).
     cacheControl: "31536000",
-  });
+  };
 
-  if (uploadError) {
-    return NextResponse.json(
-      { error: `Photo upload failed: ${uploadError.message}` },
-      { status: 502 },
-    );
+  const [fullUpload, thumbUpload] = await Promise.all([
+    supabase.storage.from(PHOTO_BUCKET).upload(photoPath, bytes, cacheOptions),
+    supabase.storage.from(PHOTO_BUCKET).upload(thumbnailPath, thumbBytes, cacheOptions),
+  ]);
+
+  if (fullUpload.error || thumbUpload.error) {
+    // Don't leave a partial pair behind - whichever one did land, remove it.
+    await supabase.storage.from(PHOTO_BUCKET).remove([photoPath, thumbnailPath]);
+    const message = fullUpload.error?.message ?? thumbUpload.error?.message;
+    return NextResponse.json({ error: `Photo upload failed: ${message}` }, { status: 502 });
   }
 
   // Every spot needs an owner_token so its creator can edit/delete it later
@@ -151,8 +167,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (dbError) {
-    // Don't leave an orphaned object behind if the row never landed.
-    await supabase.storage.from(PHOTO_BUCKET).remove([photoPath]);
+    // Don't leave orphaned objects behind if the row never landed.
+    await supabase.storage.from(PHOTO_BUCKET).remove([photoPath, thumbnailPath]);
     const conflict = dbError.code === "23505";
     return NextResponse.json(
       { error: conflict ? "A spot with that name already exists." : dbError.message },

@@ -7,6 +7,7 @@ import {
   MAX_NAME_LENGTH,
   PHOTO_BUCKET,
   PUBLIC_SPOT_COLUMNS,
+  thumbPath,
   type Spot,
 } from "@/lib/types";
 
@@ -102,10 +103,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   // Best-effort: the row is already gone either way, and a leftover Storage
   // object with nothing pointing at it is harmless (just a few hundred KB),
-  // unlike leaving an orphaned reference the other way round.
+  // unlike leaving an orphaned reference the other way round. Removes both
+  // the full photo and its thumbnail (see thumbPath in lib/types.ts).
+  const photoPath = data.photo_path as string;
   const { error: storageError } = await supabase.storage
     .from(PHOTO_BUCKET)
-    .remove([data.photo_path as string]);
+    .remove([photoPath, thumbPath(photoPath)]);
   if (storageError) console.error("[DELETE /api/spots/:id] storage cleanup", storageError.message);
 
   return NextResponse.json({ ok: true });

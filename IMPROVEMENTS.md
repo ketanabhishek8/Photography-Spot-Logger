@@ -159,7 +159,7 @@ delete it.
 
 ## P2 — Performance
 
-### 9. Serve thumbnails, not 1600px originals
+### 9. Serve thumbnails, not 1600px originals ✅ done
 **Problem.** The list shows 56px thumbnails and the gallery shows ~170px tiles, but both
 load the full 1600px photo, up to ~670 KB each. That's about 7 MB across 22 spots.
 
@@ -169,12 +169,33 @@ both `app/api/spots/route.ts` and `scripts/seed.mjs`. Store its path, or derive 
 the detail page. (Supabase's on-the-fly image transforms would also work, but they need
 a paid plan.)
 
-### 10. Add image dimensions
-**Problem.** The `<img>` tags have no `width`/`height`, so the list jumps around as
-photos load.
+**Done:** derived rather than a new column - `thumbPath()` in `lib/types.ts` maps
+`user/abc.jpg` -> `user/abc-thumb.jpg`, so no migration needed. `app/api/spots/route.ts`
+now encodes both sizes from the same decoded source in parallel
+(`THUMBNAIL_TARGET_WIDTH = 400`) and uploads both; delete removes both. `scripts/seed.mjs`
+duplicates the same width/path logic (it runs as a plain node script, can't import the
+`.ts` file - same reason `TARGET_WIDTH` was already duplicated there before this).
+`photoThumbUrl()` added to `lib/supabase/client.ts`; the list, gallery and map popup
+(`MapExperience.tsx`, `SpotMap.tsx`) now request it instead of the full `photoUrl()` -
+the detail page keeps the full size, the one place it's actually worth it. Re-ran
+`npm run seed` to backfill `-thumb` objects for all 22 already-seeded spots (upload is
+`upsert: true`, so this only added the missing thumbs, didn't disturb the existing
+full-size objects). Verified live: 22 spots still render correctly in list and gallery
+view, thumbnails genuinely smaller than the originals, detail page unaffected.
 
-**Fix.** Give the thumbnails fixed dimensions (they're already square via CSS), or store
-each photo's width and height at upload time.
+### 10. Add image dimensions - checked, not actually needed
+**Problem (as originally rated).** The `<img>` tags have no `width`/`height`, so the list
+jumps around as photos load.
+
+**Fix (as originally rated).** Give the thumbnails fixed dimensions (they're already
+square via CSS), or store each photo's width and height at upload time.
+
+**On inspection, this wasn't a real bug.** Every image sits inside a box with a fixed
+Tailwind size independent of the image's own intrinsic dimensions - `h-14 w-14` in the
+list, `aspect-square` in the gallery, `h-32 w-full` in the map popup - so there's no
+layout shift for `width`/`height` attributes to prevent; the box holds its size before
+the image ever loads. Correcting the original rating rather than adding a no-op
+`width`/`height` pair just to check the box.
 
 ### 11. Marker clustering, once it's needed
 Still unnecessary at 22 spots. Add `react-leaflet-cluster` when user-added spots push the
@@ -189,9 +210,16 @@ Delete uses the browser's built-in pop-ups (`MapExperience.tsx`, `handleDelete`)
 inline confirm on the row ("Delete? Yes / No") and show errors inline, the same way the
 forms already do.
 
-### 13. Adjustable "Near me" radius
+### 13. Adjustable "Near me" radius ✅ done
 `RADIUS_M` is hard-coded to 5000 in `MapExperience.tsx`. The original plan had a radius
 slider. Offer 1 / 5 / 10 km as a small segmented control.
+
+**Done:** a 1/5/10 km segmented control next to the Near me button. Changing it while a
+search is already active re-queries with the stored coordinates instead of asking the
+browser for location again - only the first click needs a fresh permission
+prompt/GPS lock. Verified live via the accessibility tree (`aria-pressed` on each
+option) after ruling out a stale-HMR false alarm (a hard reload fixed it, confirming the
+underlying code was correct all along).
 
 ### 14. Edit form can silently change `best_time` ✅ done
 `EditSpotForm.tsx` only offers the 6 `BEST_TIME_OPTIONS`. If a spot's value isn't one of
@@ -212,10 +240,15 @@ had to account for the same mismatch).
 site-wide title and has no Open Graph image. Add a title and use the spot's photo as the
 `og:image`, so shared links show a proper preview.
 
-### 16. Accessible map markers
+### 16. Accessible map markers ✅ done
 Leaflet pins show up in the accessibility tree as unlabelled buttons (confirmed with
 `read_page`). Give each marker the spot name as its title/alt, e.g. via Leaflet's
 `title` option on `Marker`.
+
+**Done:** `alt`/`title` added to each `<Marker>` in `SpotMap.tsx`. Verified with
+`read_page`: all 22 markers now read as `button "Gateway of India"`,
+`button "Mount Mary Church"`, etc., where before every one of the 22 was an unlabelled
+`button` with no accessible name.
 
 ### 17. Edit photo and location
 Editing currently covers name, description and best time only. Letting people replace

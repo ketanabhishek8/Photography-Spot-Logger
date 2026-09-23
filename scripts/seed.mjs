@@ -23,6 +23,20 @@ const BUCKET = "spot-photos";
 // Mirrors UPLOAD_TARGET_WIDTH in lib/types.ts, which the API route uses for
 // user-submitted photos - keep the two in sync.
 const TARGET_WIDTH = 1600;
+// Mirrors THUMBNAIL_TARGET_WIDTH in lib/types.ts - a second, smaller
+// derivative uploaded alongside the full photo for the list/gallery/popup,
+// which never display more than a 56-224px box. This file can't import
+// lib/types.ts directly (it runs as a plain node script, not through
+// Next's TS pipeline), so both constants are duplicated with this comment
+// as the tripwire - keep them in sync by hand.
+const THUMBNAIL_TARGET_WIDTH = 400;
+
+/** `seed/gateway-of-india.jpg` -> `seed/gateway-of-india-thumb.jpg`. Mirrors
+ * thumbPath in lib/types.ts (same "can't import TS" reason as above). */
+function thumbPath(photoPath) {
+  const dot = photoPath.lastIndexOf(".");
+  return dot === -1 ? `${photoPath}-thumb` : `${photoPath.slice(0, dot)}-thumb${photoPath.slice(dot)}`;
+}
 // Wikimedia blocks requests with a generic or absent User-Agent, so identify properly.
 const USER_AGENT =
   "PhotoSpotLogger/1.0 (educational cloud mini-project; contact: local dev)";
@@ -129,29 +143,37 @@ async function seedOne(spot) {
   // so these can still land 300KB-1.5MB - way more than a 56px sidebar
   // thumbnail or a gallery tile needs. Run every seed photo through the same
   // sharp pipeline the upload API uses for user-submitted photos, so seeded
-  // and user-added spots are equally lightweight to serve.
+  // and user-added spots are equally lightweight to serve. Also produce the
+  // smaller -thumb derivative every read path other than the detail page
+  // actually uses (see photoThumbUrl in lib/supabase/client.ts).
   const contentType = "image/jpeg";
-  const bytes = await sharp(downloaded)
-    .rotate()
-    .resize({ width: TARGET_WIDTH, withoutEnlargement: true })
-    .jpeg({ quality: 82, mozjpeg: true })
-    .toBuffer();
+  const source = sharp(downloaded).rotate();
+  const [bytes, thumbBytes] = await Promise.all([
+    source.clone().resize({ width: TARGET_WIDTH, withoutEnlargement: true }).jpeg({ quality: 82, mozjpeg: true }).toBuffer(),
+    source.clone().resize({ width: THUMBNAIL_TARGET_WIDTH, withoutEnlargement: true }).jpeg({ quality: 82, mozjpeg: true }).toBuffer(),
+  ]);
 
   const photoPath = `seed/${spot.slug}.jpg`;
+  const thumbnailPath = thumbPath(photoPath);
 
   if (dryRun) {
     return { photoPath, kb: Math.round(bytes.length / 1024), license: meta.license };
   }
 
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(photoPath, bytes, {
+  const uploadOptions = {
     contentType,
     upsert: true,
     // Seed photo bytes never change in place (a re-seed overwrites the same
     // path deliberately) - cache aggressively instead of Supabase's 1hr
-    // default so repeat visits don't re-download ~1MB images.
+    // default so repeat visits don't re-download the same image.
     cacheControl: "31536000",
-  });
-  if (uploadError) throw new Error(`storage upload failed: ${uploadError.message}`);
+  };
+  const [fullUpload, thumbUpload] = await Promise.all([
+    supabase.storage.from(BUCKET).upload(photoPath, bytes, uploadOptions),
+    supabase.storage.from(BUCKET).upload(thumbnailPath, thumbBytes, uploadOptions),
+  ]);
+  if (fullUpload.error) throw new Error(`storage upload failed: ${fullUpload.error.message}`);
+  if (thumbUpload.error) throw new Error(`thumbnail upload failed: ${thumbUpload.error.message}`);
 
   const { error: dbError } = await supabase.from("spots").upsert(
     {

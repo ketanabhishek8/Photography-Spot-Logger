@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AddSpotForm from "@/components/AddSpotForm";
 import EditSpotForm from "@/components/EditSpotForm";
-import { getSupabase, photoUrl } from "@/lib/supabase/client";
+import { getSupabase, photoThumbUrl } from "@/lib/supabase/client";
 import type { Spot } from "@/lib/types";
 
 /**
@@ -22,7 +22,8 @@ const SpotMap = dynamic(() => import("@/components/SpotMap"), {
   ),
 });
 
-const RADIUS_M = 5000;
+const RADIUS_OPTIONS_KM = [1, 5, 10] as const;
+const DEFAULT_RADIUS_KM = 5;
 
 export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; ownedIds: string[] }) {
   const router = useRouter();
@@ -32,6 +33,10 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
   const [nearbyIds, setNearbyIds] = useState<string[] | null>(null);
   const [nearbyNote, setNearbyNote] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
+  // Kept so changing the radius re-queries with the same location fix
+  // rather than asking the browser for permission/a GPS lock all over again.
+  const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
   const [search, setSearch] = useState("");
   const [bestTimeFilter, setBestTimeFilter] = useState("");
   const [view, setView] = useState<"list" | "gallery">("list");
@@ -103,10 +108,27 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
    * Proximity search runs in Postgres via the PostGIS ST_DWithin function
    * rather than filtering in JavaScript - see spots_within_radius in schema.sql.
    */
-  async function findNearby() {
+  async function runNearbySearch(lat: number, lng: number, km: number) {
+    try {
+      const { data, error } = await getSupabase().rpc("spots_within_radius", {
+        lat,
+        lng,
+        radius_m: km * 1000,
+      });
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as Spot[];
+      setNearbyIds(rows.map((r) => r.id));
+      setNearbyNote(`${rows.length} spot${rows.length === 1 ? "" : "s"} within ${km} km`);
+    } catch (err) {
+      setNearbyNote(err instanceof Error ? err.message : "Nearby search failed.");
+    }
+  }
+
+  function findNearby() {
     if (nearbyIds) {
       setNearbyIds(null);
       setNearbyNote(null);
+      setUserCoords(null);
       return;
     }
     if (!navigator.geolocation) {
@@ -115,25 +137,19 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
     }
     setNearbyNote("Locating...");
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+      (pos) => {
         const { latitude, longitude } = pos.coords;
-        try {
-          const { data, error } = await getSupabase().rpc("spots_within_radius", {
-            lat: latitude,
-            lng: longitude,
-            radius_m: RADIUS_M,
-          });
-          if (error) throw new Error(error.message);
-          const rows = (data ?? []) as Spot[];
-          setNearbyIds(rows.map((r) => r.id));
-          setFlyTarget([latitude, longitude]);
-          setNearbyNote(`${rows.length} spot${rows.length === 1 ? "" : "s"} within 5 km`);
-        } catch (err) {
-          setNearbyNote(err instanceof Error ? err.message : "Nearby search failed.");
-        }
+        setUserCoords([latitude, longitude]);
+        setFlyTarget([latitude, longitude]);
+        runNearbySearch(latitude, longitude, radiusKm);
       },
       () => setNearbyNote("Location permission denied."),
     );
+  }
+
+  function changeRadius(km: number) {
+    setRadiusKm(km);
+    if (userCoords) runNearbySearch(userCoords[0], userCoords[1], km);
   }
 
   return (
@@ -214,6 +230,27 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
           </div>
 
           {nearbyNote && <p className="mt-2 text-xs text-stone-500">{nearbyNote}</p>}
+
+          {!editing && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-stone-400">Radius</span>
+              <div className="flex overflow-hidden rounded-md border border-stone-300">
+                {RADIUS_OPTIONS_KM.map((km) => (
+                  <button
+                    key={km}
+                    type="button"
+                    onClick={() => changeRadius(km)}
+                    aria-pressed={radiusKm === km}
+                    className={`px-2 py-1 text-xs transition ${
+                      radiusKm === km ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-100"
+                    }`}
+                  >
+                    {km} km
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {!editing && (
             <div className="mt-3 flex gap-2">
@@ -308,7 +345,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={photoUrl(spot.photo_path)}
+                        src={photoThumbUrl(spot.photo_path)}
                         alt=""
                         className="h-14 w-14 shrink-0 rounded-md bg-stone-200 object-cover"
                         loading="lazy"
@@ -348,7 +385,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={photoUrl(spot.photo_path)}
+                        src={photoThumbUrl(spot.photo_path)}
                         alt=""
                         loading="lazy"
                         className="aspect-square w-full rounded-lg bg-stone-200 object-cover transition group-hover:opacity-90"

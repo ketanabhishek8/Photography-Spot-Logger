@@ -15,8 +15,9 @@ let cached: SupabaseClient | null = null;
  * Browser-safe Supabase client, created lazily so that an unconfigured project
  * renders a setup screen rather than throwing at import time.
  *
- * The anon key is public by design: what it may do is governed by the RLS
- * policies in supabase/schema.sql (select + insert on `spots`, nothing more).
+ * The anon key is public by design: what it may do is governed by RLS plus
+ * the column-level grant in supabase/schema.sql - public select only
+ * (excluding owner_token); every write goes through app/api/spots/ instead.
  */
 export function getSupabase(): SupabaseClient {
   if (!isSupabaseConfigured()) {
@@ -32,4 +33,24 @@ export function getSupabase(): SupabaseClient {
  */
 export function photoUrl(photoPath: string): string {
   return `${URL_ENV}/storage/v1/object/public/${PHOTO_BUCKET}/${photoPath}`;
+}
+
+/**
+ * Every upload (app/api/spots/route.ts, scripts/seed.mjs) stores a small
+ * companion thumbnail next to the full photo, at the same path with
+ * `-thumb` inserted before the extension - no separate DB column needed,
+ * the path is derived. Use this anywhere a photo renders small (the
+ * sidebar list, the gallery grid, the map popup): those only ever displayed
+ * a 56-224px box, but were downloading the full 1600px original (up to
+ * ~670 KB) to do it. The detail page is the one place that's still worth
+ * the full-size photoUrl().
+ */
+export function photoThumbUrl(photoPath: string): string {
+  return photoUrl(thumbPath(photoPath));
+}
+
+function thumbPath(photoPath: string): string {
+  const dot = photoPath.lastIndexOf(".");
+  if (dot === -1) return `${photoPath}-thumb`;
+  return `${photoPath.slice(0, dot)}-thumb${photoPath.slice(dot)}`;
 }

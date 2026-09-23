@@ -63,3 +63,23 @@ export const BEST_TIME_OPTIONS = [
  * requests from Wikimedia for the seeded photos.
  */
 export const UPLOAD_TARGET_WIDTH = 1600;
+
+/**
+ * A second, smaller derivative is stored alongside every full photo (see
+ * photoThumbUrl in lib/supabase/client.ts, uploaded by
+ * app/api/spots/route.ts and scripts/seed.mjs) - the list, gallery and map
+ * popup only ever display a photo in a 56-224px box, so there's no reason
+ * for them to pull the full 1600px original just to shrink it in CSS.
+ */
+export const THUMBNAIL_TARGET_WIDTH = 400;
+
+/**
+ * `user/abc123.jpg` -> `user/abc123-thumb.jpg`. One shared implementation
+ * so the writer (route.ts/seed.mjs, deciding where to upload the thumbnail)
+ * and the reader (photoThumbUrl, deciding where to fetch it from) can never
+ * drift apart on the naming convention.
+ */
+export function thumbPath(photoPath: string): string {
+  const dot = photoPath.lastIndexOf(".");
+  return dot === -1 ? `${photoPath}-thumb` : `${photoPath.slice(0, dot)}-thumb${photoPath.slice(dot)}`;
+}

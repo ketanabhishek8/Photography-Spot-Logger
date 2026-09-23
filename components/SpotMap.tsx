@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { photoUrl } from "@/lib/supabase/client";
+import { photoThumbUrl } from "@/lib/supabase/client";
 import { DEFAULT_ZOOM, MUMBAI_CENTER, type Spot } from "@/lib/types";
 
 const TILE_URL = process.env.NEXT_PUBLIC_TILE_URL || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -67,12 +67,18 @@ export default function SpotMap({
   const markers = useMemo(
     () =>
       spots.map((spot) => (
-        <Marker key={spot.id} position={[spot.latitude, spot.longitude]} icon={spotIcon}>
+        <Marker
+          key={spot.id}
+          position={[spot.latitude, spot.longitude]}
+          icon={spotIcon}
+          alt={spot.name}
+          title={spot.name}
+        >
           <Popup>
             <div className="w-56">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={photoUrl(spot.photo_path)}
+                src={photoThumbUrl(spot.photo_path)}
                 alt={spot.name}
                 className="h-32 w-full rounded-md object-cover"
                 loading="lazy"
