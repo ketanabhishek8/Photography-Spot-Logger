@@ -18,6 +18,17 @@ export type Spot = {
 /** The bucket every spot photo lives in. Public-read; writes are server-only. */
 export const PHOTO_BUCKET = "spot-photos";
 
+/**
+ * Columns safe to send to the browser - excludes owner_token. The
+ * service-role client used for every write (including the edit/delete
+ * ownership check in app/api/spots/[id]/route.ts) can select owner_token
+ * freely, so every insert/update response projects through this explicit
+ * list rather than `select()`/`select("*")`, matching the column-level
+ * grant anon/authenticated get in supabase/schema.sql.
+ */
+export const PUBLIC_SPOT_COLUMNS =
+  "id, name, description, latitude, longitude, photo_path, best_time, attribution, license, source_url, is_seed, created_at";
+
 /** Map defaults: Mumbai, wide enough to take in Colaba through Borivali. */
 export const MUMBAI_CENTER: [number, number] = [19.076, 72.8777];
 export const DEFAULT_ZOOM = 11;

@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import sharp from "sharp";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, clientKey } from "@/lib/rateLimit";
+import { OWNER_TOKEN_COOKIE } from "@/proxy";
 import {
   ALLOWED_MIME,
   MAX_UPLOAD_BYTES,
   PHOTO_BUCKET,
+  PUBLIC_SPOT_COLUMNS,
   UPLOAD_TARGET_WIDTH,
   type Spot,
 } from "@/lib/types";
@@ -30,7 +32,7 @@ function bad(message: string) {
  * Writes happen here rather than in the browser so the service-role key never
  * leaves the server. The browser only ever holds the anon key.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const limit = checkRateLimit(clientKey(request));
   if (!limit.ok) {
     return NextResponse.json(
@@ -113,6 +115,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // Every spot needs an owner_token so its creator can edit/delete it later
+  // with no account - proxy.ts sets this cookie on first visit, so it's
+  // normally already present; generate one here too as a defensive fallback
+  // (e.g. a direct POST that somehow skipped the proxy) and hand it back the
+  // same way, so this request still ends up "owning" the row.
+  let ownerToken = request.cookies.get(OWNER_TOKEN_COOKIE)?.value;
+  let setOwnerCookie = false;
+  if (!ownerToken) {
+    ownerToken = crypto.randomUUID();
+    setOwnerCookie = true;
+  }
+
   const { data, error: dbError } = await supabase
     .from("spots")
     .insert({
@@ -123,8 +137,9 @@ export async function POST(request: Request) {
       photo_path: photoPath,
       best_time: bestTime || null,
       is_seed: false,
+      owner_token: ownerToken,
     })
-    .select()
+    .select(PUBLIC_SPOT_COLUMNS)
     .single();
 
   if (dbError) {
@@ -137,5 +152,14 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ spot: data as Spot }, { status: 201 });
+  const response = NextResponse.json({ spot: data as Spot }, { status: 201 });
+  if (setOwnerCookie) {
+    response.cookies.set(OWNER_TOKEN_COOKIE, ownerToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+  return response;
 }

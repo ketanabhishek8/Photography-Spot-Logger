@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { photoUrl } from "@/lib/supabase/client";
-import type { Spot } from "@/lib/types";
+import { PUBLIC_SPOT_COLUMNS, type Spot } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,13 @@ async function getSpot(id: string): Promise<Spot | null> {
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data } = await supabase.from("spots").select("*").eq("id", id).maybeSingle();
+  // anon only has column-level SELECT (supabase/schema.sql), not whole-table -
+  // a bare select("*") gets denied outright rather than narrowed.
+  const { data } = await supabase
+    .from("spots")
+    .select(PUBLIC_SPOT_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
   return (data as Spot) ?? null;
 }
 

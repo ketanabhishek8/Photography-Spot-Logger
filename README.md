@@ -131,6 +131,17 @@ in that list.
 **Attribution.** The seeded photos are CC BY / CC BY-SA / CC0 / FAL licensed and all require
 credit, so the seeder stores the author and licence per row and the detail page displays them.
 
+**Editing/deleting your own spots.** There's no login, but every browser gets an anonymous
+`pit_owner_token` cookie (`proxy.ts`) the first time it visits. A spot created from that
+browser gets that token stamped on it server-side; the edit/delete icons on the sidebar
+only show up for spots whose token matches your cookie, and `app/api/spots/[id]/route.ts`
+re-checks the same match before touching the database, using the service-role client (the
+only role that can even read the `owner_token` column — see below). Clearing cookies or
+switching browsers means those spots are no longer yours to edit; there's no account to
+log back into. Editing is limited to name/description/best time — the photo and pin
+location aren't editable, since changing either really means re-running the whole
+upload/resize path, and "delete, then re-log it" already covers that.
+
 ---
 
 ## Scripts
@@ -147,8 +158,17 @@ credit, so the seeder stores the author and licence per row and the detail page 
 
 ## Notes and limits
 
-- **No authentication.** Anyone can add a spot. RLS allows public `select` and `insert` but
-  grants no `update` or `delete`, so the seeded spots cannot be edited or wiped anonymously.
+- **No accounts, but not fully anonymous either.** Anyone can add a spot; RLS grants
+  public `select`/`insert` and deliberately nothing else, so no client can update or
+  delete a row directly. Edit/delete goes through the API instead and is scoped to
+  "whichever browser created it" via a cookie — see "Editing/deleting your own spots"
+  above. Seeded spots have no owner and so can never be edited or deleted by anyone.
+- **`owner_token` is a bearer secret, not just a foreign key.** It never leaves the
+  server: httpOnly cookie in, service-role-only column out. `supabase/schema.sql` grants
+  anon/authenticated `select` on every other column but explicitly not this one — RLS is
+  row-level only, so without that column-level grant, the (public, bundled-in-the-JS)
+  anon key could read every row's token straight from the REST API and forge ownership
+  of any spot.
 - **Map tiles** come from MapTiler (`NEXT_PUBLIC_TILE_URL`/`NEXT_PUBLIC_TILE_ATTRIBUTION` —
   see `.env.example`), free tier, no credit card, key restricted by HTTP origin. Falls back
   to OpenStreetMap's own tile server if those env vars are unset, so cloning the repo

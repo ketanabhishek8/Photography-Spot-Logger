@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AddSpotForm from "@/components/AddSpotForm";
+import EditSpotForm from "@/components/EditSpotForm";
 import { getSupabase, photoUrl } from "@/lib/supabase/client";
 import type { Spot } from "@/lib/types";
 
@@ -23,7 +24,7 @@ const SpotMap = dynamic(() => import("@/components/SpotMap"), {
 
 const RADIUS_M = 5000;
 
-export default function MapExperience({ spots }: { spots: Spot[] }) {
+export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; ownedIds: string[] }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -34,6 +35,31 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
   const [search, setSearch] = useState("");
   const [bestTimeFilter, setBestTimeFilter] = useState("");
   const [view, setView] = useState<"list" | "gallery">("list");
+  const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Which spots this browser logged and can therefore edit/delete - computed
+  // server-side (app/page.tsx) from the pit_owner_token cookie, since only
+  // the service-role client can read owner_token at all (see schema.sql).
+  const ownedSet = useMemo(() => new Set(ownedIds), [ownedIds]);
+  const editing = adding || editingSpot !== null;
+
+  async function handleDelete(spot: Spot) {
+    if (!window.confirm(`Delete "${spot.name}"? This can't be undone.`)) return;
+    setDeletingId(spot.id);
+    try {
+      const res = await fetch(`/api/spots/${spot.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error ?? "Could not delete the spot.");
+      }
+      router.refresh();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const visible = useMemo(() => {
     let list = nearbyIds ? spots.filter((s) => nearbyIds.includes(s.id)) : spots;
@@ -124,7 +150,7 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
                 ? `${spots.length} spot${spots.length === 1 ? "" : "s"} logged`
                 : `${visible.length} of ${spots.length} spots`}
             </p>
-            {!adding && (
+            {!editing && (
               <div className="flex overflow-hidden rounded-md border border-stone-300">
                 <button
                   type="button"
@@ -167,7 +193,7 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
           </div>
 
           <div className="mt-3 flex gap-2">
-            {!adding && (
+            {!editing && (
               <button
                 onClick={startAdding}
                 className="flex-1 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
@@ -189,7 +215,7 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
 
           {nearbyNote && <p className="mt-2 text-xs text-stone-500">{nearbyNote}</p>}
 
-          {!adding && (
+          {!editing && (
             <div className="mt-3 flex gap-2">
               <input
                 type="search"
@@ -242,6 +268,15 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
                 }}
               />
             </div>
+          ) : editingSpot ? (
+            <EditSpotForm
+              spot={editingSpot}
+              onCancel={() => setEditingSpot(null)}
+              onSaved={() => {
+                setEditingSpot(null);
+                router.refresh();
+              }}
+            />
           ) : visible.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-stone-400">
               {filtering ? (
@@ -263,59 +298,83 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
             </p>
           ) : view === "list" ? (
             <ul className="divide-y divide-stone-100">
-              {visible.map((spot) => (
-                <li key={spot.id}>
-                  <button
-                    onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
-                    className="flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-stone-50"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photoUrl(spot.photo_path)}
-                      alt=""
-                      className="h-14 w-14 shrink-0 rounded-md bg-stone-200 object-cover"
-                      loading="lazy"
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-stone-900">
-                        {spot.name}
+              {visible.map((spot) => {
+                const mine = ownedSet.has(spot.id);
+                return (
+                  <li key={spot.id} className="flex items-center gap-1 px-2 transition hover:bg-stone-50">
+                    <button
+                      onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
+                      className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photoUrl(spot.photo_path)}
+                        alt=""
+                        className="h-14 w-14 shrink-0 rounded-md bg-stone-200 object-cover"
+                        loading="lazy"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-stone-900">
+                          {spot.name}
+                        </span>
+                        {spot.best_time && (
+                          <span className="block text-xs text-stone-500">{spot.best_time}</span>
+                        )}
                       </span>
-                      {spot.best_time && (
-                        <span className="block text-xs text-stone-500">{spot.best_time}</span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
+                    </button>
+                    {mine && (
+                      <SpotOwnerControls
+                        deleting={deletingId === spot.id}
+                        onEdit={() => setEditingSpot(spot)}
+                        onDelete={() => handleDelete(spot)}
+                      />
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             // Gallery view: bigger square thumbnails in a 2-column grid, useful
             // once there are enough spots that scanning the plain list feels
             // slow - the whole point of adding this alongside the list.
             <div className="grid grid-cols-2 gap-2 p-3">
-              {visible.map((spot) => (
-                <button
-                  key={spot.id}
-                  onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
-                  className="group text-left"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photoUrl(spot.photo_path)}
-                    alt=""
-                    loading="lazy"
-                    className="aspect-square w-full rounded-lg bg-stone-200 object-cover transition group-hover:opacity-90"
-                  />
-                  <span className="mt-1 block truncate text-xs font-medium text-stone-900">
-                    {spot.name}
-                  </span>
-                  {spot.best_time && (
-                    <span className="block truncate text-[11px] text-stone-500">
-                      {spot.best_time}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {visible.map((spot) => {
+                const mine = ownedSet.has(spot.id);
+                return (
+                  <div key={spot.id} className="group relative">
+                    <button
+                      onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
+                      className="w-full text-left"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photoUrl(spot.photo_path)}
+                        alt=""
+                        loading="lazy"
+                        className="aspect-square w-full rounded-lg bg-stone-200 object-cover transition group-hover:opacity-90"
+                      />
+                      <span className="mt-1 block truncate text-xs font-medium text-stone-900">
+                        {spot.name}
+                      </span>
+                      {spot.best_time && (
+                        <span className="block truncate text-[11px] text-stone-500">
+                          {spot.best_time}
+                        </span>
+                      )}
+                    </button>
+                    {mine && (
+                      <div className="absolute right-1 top-1">
+                        <SpotOwnerControls
+                          deleting={deletingId === spot.id}
+                          onEdit={() => setEditingSpot(spot)}
+                          onDelete={() => handleDelete(spot)}
+                          overlay
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -334,6 +393,56 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
           }}
         />
       </div>
+    </div>
+  );
+}
+
+/** Small edit/delete icon pair shown only on spots this browser owns. */
+function SpotOwnerControls({
+  deleting,
+  onEdit,
+  onDelete,
+  overlay = false,
+}: {
+  deleting: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  overlay?: boolean;
+}) {
+  const btn = overlay
+    ? "rounded-md bg-white/90 p-1 text-stone-600 shadow-sm backdrop-blur transition hover:text-stone-900 disabled:opacity-50"
+    : "shrink-0 rounded-md p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700 disabled:opacity-50";
+
+  return (
+    <div className="flex shrink-0 gap-1">
+      <button type="button" onClick={onEdit} aria-label="Edit spot" title="Edit" className={btn}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path
+            d="M11.3 2.3a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7 7-2.7.7.7-2.7 7-7Z"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={deleting}
+        aria-label="Delete spot"
+        title="Delete"
+        className={btn}
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path
+            d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M6 7.5v4M10 7.5v4M4 4.5l.6 8a1 1 0 0 0 1 .95h4.8a1 1 0 0 0 1-.95l.6-8"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
     </div>
   );
 }

@@ -3,12 +3,14 @@
 Where the app stands and what's left, in the order we'll tackle it. Each stage has a
 "done when" so we know when to move on. Check items off as we go.
 
-**Current state:** Stages 0-3 done in full; Stage 4 done except marker clustering and
-edit/delete, both explicitly deferred (clustering isn't needed yet at 14 spots,
-edit/delete needs real accounts and is deferred to Stage 5). Stage 5 (auth) not
-started, not currently planned. Two fixes landed outside the stage sequence since: an
-invisible-input-text bug on dark-mode browsers, and
-a switch from OpenStreetMap to MapTiler tiles - see "Post-Stage-4 fixes" below.
+**Current state:** Stages 0-4 done. Edit/delete own spots shipped without real
+accounts - session-owned via an anonymous cookie, not Stage 5's auth (the user
+explicitly chose to skip accounts; Stage 5 is now a non-goal, not a future stage).
+Marker clustering remains deferred (not needed yet at 14 spots). Several fixes landed
+outside the stage sequence: invisible input text on dark-mode browsers, a switch from
+OpenStreetMap to MapTiler tiles, seed-photo compression, and a Vercel function-region
+fix for the actual "map loads slowly" cause - see "Post-Stage-4 fixes" and
+"Edit/delete own spots" below.
 
 ---
 
@@ -166,11 +168,11 @@ search/filter for this pass; the rest stay in the backlog.*
       Worth adding once user-submitted spots push the count into the hundreds
       (`react-leaflet-cluster` or similar). *Explicitly deferred again rather than
       built ahead of need, when re-asked.*
-- [ ] **Edit/delete own spots.** Skipped for now - deferred to Stage 5, when real
-      accounts exist. A token-based no-auth workaround was considered and declined:
-      it'd mean redoing this properly once auth exists anyway, and a client-side-only
-      token isn't real per-user security. Currently impossible for anyone, including
-      the person who logged it - RLS only grants `select` + `insert`.
+- [x] **Edit/delete own spots.** Initially deferred to Stage 5 - a token-based no-auth
+      workaround was considered and declined at the time. Revisited when the user
+      decided against Stage 5 entirely and asked for it session-owned instead; see
+      "Edit/delete own spots" below for the actual (properly secured, this time)
+      implementation.
 - [x] **Search/filter.** Sidebar now has a text search (matches name + description) and a
       best-time dropdown, both client-side over the already-loaded spots (combines with
       "Near me"). Caught a real bug while building this: the dropdown initially reused
@@ -252,22 +254,72 @@ HTML and re-ran the search test directly against the deployed URL ("elephanta" -
 
 ---
 
-## Stage 5 — Optional: add real auth
-*Explicitly skipped in the original build ("open logging"). Only do this if you actually
-want per-user ownership — it's a bigger change than anything above.*
+## Edit/delete own spots — shipped, without Stage 5's real auth
+*User's call: skip accounts entirely ("let's not keep auth, let's keep it session
+owned"), so this landed as its own thing rather than depending on Stage 5.*
 
-- [ ] Supabase email/password (or OAuth) auth
-- [ ] `user_id` column on `spots`, RLS policies keyed to `auth.uid()`
-- [ ] Update/delete policies scoped to the owning user
-- [ ] Sign-in screen, session-aware UI (show "delete" only on your own spots)
+- [x] **Session-owned edit/delete.** Every browser gets an anonymous, random
+      `pit_owner_token` cookie on first visit (`proxy.ts` - Next.js 16 renamed the
+      `middleware.ts` file convention to `proxy.ts`; confirmed genuine via the docs
+      shipped in `node_modules/next/dist/docs`, not just the deprecation warning, and
+      migrated properly rather than leaving the deprecated name in place). httpOnly, so
+      client JS never touches it - the browser just attaches it automatically to every
+      same-origin request. A spot's `owner_token` column is set from that cookie at
+      creation time; `app/api/spots/[id]/route.ts` (new) only lets a PATCH/DELETE through
+      when the request's cookie matches the row's stored token, checked with the
+      service-role client (the only role that can even read that column). No login, no
+      password, no user table - "yours" just means "created from this browser."
+- [x] **Closed the leak this design would otherwise have.** RLS is row-level only, and
+      the anon key is public (shipped in the JS bundle) - so if `owner_token` were
+      selectable like every other column, anyone could read every row's token straight
+      from the REST API and forge ownership of any spot. Fixed with a **column-level**
+      grant (`grant select (id, name, ..., geog) on spots to anon` - `owner_token`
+      deliberately left out), on top of RLS, in `supabase/schema.sql`. Also had to
+      explicitly `revoke select on spots from anon, authenticated` first, since GRANT is
+      additive - the old whole-table grant from every earlier run of this file would
+      otherwise still have applied on top of the new narrower one.
+- [x] **`spots_within_radius()` rewritten** to return explicit columns instead of
+      `setof spots`, for the same reason (the "Near me" RPC runs as the calling role, so
+      it was one more path that could have surfaced `owner_token`).
+- [x] **Caught a real self-inflicted outage while verifying the migration.** After
+      tightening the grant, `fetchSpots()` and the spot detail page both broke with
+      "permission denied for table spots" - they still called `.select("*")`, and
+      Postgres denies a bare wildcard select outright for a role with only column-level
+      privileges rather than silently narrowing it. Fixed by naming the safe columns
+      explicitly everywhere the anon client reads (`PUBLIC_SPOT_COLUMNS` in
+      `lib/types.ts`), caught immediately because the very next reload showed "0 spots
+      logged" instead of 14 - not something that slipped through.
+- [x] **Verified for real, not just by reading the code:** created a spot through the
+      actual UI (draft pin on the map, an injected `File` through the real input, a real
+      POST), confirmed edit/delete icons appeared only on that spot and not on any seed
+      spot, edited it through the UI, then ran the security-relevant checks directly
+      against the API: a `DELETE` with the ownership cookie stripped (`credentials:
+      "omit"`) got a 403, a raw REST call selecting `owner_token` with the public anon
+      key got a permission-denied error (not just an empty result), and the real `DELETE`
+      with the cookie present succeeded and removed both the Postgres row and the
+      Storage object. Confirmed the count was back to 14 afterward. Also re-ran the
+      "Near me" RPC directly against the new function signature to make sure the rewrite
+      didn't break it (still returns the expected 4 South Mumbai spots for a 5 km radius
+      around Gateway of India).
 
-**Done when:** users can only edit/delete spots they logged, and everything else still
-works for anonymous browsers.
+**Editable fields are deliberately narrower than creation:** name, description and best
+time only - not the photo or pin location. Both of those would mean re-running the
+upload/sharp/orphan-cleanup path `AddSpotForm`/`app/api/spots/route.ts` already does;
+"delete, then re-log with the right photo/pin" covers that without duplicating it.
+
+**What this is not:** real accounts. Clearing cookies/site data, or opening the same
+browser in a different profile, means those spots are no longer editable from there -
+there's nothing to log back into. That trade-off was the explicit point of choosing this
+over Stage 5.
 
 ---
 
 ## Not planned (explicit non-goals for now)
 
+- **Stage 5's original scope (Supabase email/OAuth auth, a real user table, sign-in
+  UI).** Superseded by session-owned edit/delete above - the user explicitly chose to
+  skip accounts rather than build them, so this is a deliberate non-goal now, not a
+  future stage.
 - Multi-city support beyond Mumbai — the manifest/seed approach generalizes easily if
   this becomes wanted later, but it's not in scope yet.
 - Native mobile app — the web app is responsive and works on phone browsers already.
