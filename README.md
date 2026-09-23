@@ -156,6 +156,10 @@ credit, so the seeder stores the author and licence per row and the detail page 
   is swappable with no code change.
 - **Uploads** are capped at 8 MB, then downscaled server-side to 1600px wide with `sharp`
   before being stored (EXIF-oriented first, so re-encoded photos don't come out sideways).
+  The seed script runs the exact same pipeline on the Commons downloads, so the pre-loaded
+  spots are just as lightweight as anything logged through the app. Every upload also sets
+  a one-year `cacheControl` on the Storage object, since photo paths are never overwritten
+  in place.
 - **Rate limiting** on `/api/spots` is a best-effort in-memory counter (10 requests per
   caller per 10 minutes) — see the comment in `lib/rateLimit.ts` for why this isn't a real
   distributed guarantee on Vercel's serverless functions, and what to reach for

@@ -15,10 +15,13 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 
 const BUCKET = "spot-photos";
 // Commons originals run to 20 MB+. Ask Wikimedia's thumbnailer for a web-sized
 // rendition instead: far kinder to the Supabase free tier and to page loads.
+// Mirrors UPLOAD_TARGET_WIDTH in lib/types.ts, which the API route uses for
+// user-submitted photos - keep the two in sync.
 const TARGET_WIDTH = 1600;
 // Wikimedia blocks requests with a generic or absent User-Agent, so identify properly.
 const USER_AGENT =
@@ -120,19 +123,34 @@ async function seedOne(spot) {
   const imgRes = await fetchWithRetry(meta.downloadUrl);
   if (!imgRes.ok) throw new Error(`photo download failed (${imgRes.status})`);
 
-  const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
-  const bytes = new Uint8Array(await imgRes.arrayBuffer());
+  const downloaded = new Uint8Array(await imgRes.arrayBuffer());
 
-  const ext = contentType.includes("png") ? "png" : "jpg";
-  const photoPath = `seed/${spot.slug}.${ext}`;
+  // Wikimedia's thumbnailer (iiurlwidth above) resizes but doesn't recompress,
+  // so these can still land 300KB-1.5MB - way more than a 56px sidebar
+  // thumbnail or a gallery tile needs. Run every seed photo through the same
+  // sharp pipeline the upload API uses for user-submitted photos, so seeded
+  // and user-added spots are equally lightweight to serve.
+  const contentType = "image/jpeg";
+  const bytes = await sharp(downloaded)
+    .rotate()
+    .resize({ width: TARGET_WIDTH, withoutEnlargement: true })
+    .jpeg({ quality: 82, mozjpeg: true })
+    .toBuffer();
+
+  const photoPath = `seed/${spot.slug}.jpg`;
 
   if (dryRun) {
     return { photoPath, kb: Math.round(bytes.length / 1024), license: meta.license };
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(photoPath, bytes, { contentType, upsert: true });
+  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(photoPath, bytes, {
+    contentType,
+    upsert: true,
+    // Seed photo bytes never change in place (a re-seed overwrites the same
+    // path deliberately) - cache aggressively instead of Supabase's 1hr
+    // default so repeat visits don't re-download ~1MB images.
+    cacheControl: "31536000",
+  });
   if (uploadError) throw new Error(`storage upload failed: ${uploadError.message}`);
 
   const { error: dbError } = await supabase.from("spots").upsert(

@@ -97,9 +97,14 @@ export async function POST(request: Request) {
     return bad("That file isn't a readable image.");
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .upload(photoPath, bytes, { contentType: photo.type, upsert: false });
+  const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(photoPath, bytes, {
+    contentType: photo.type,
+    upsert: false,
+    // photoPath is a fresh UUID per upload and is never overwritten, so this
+    // is safe to cache for as long as browsers will keep it (Supabase's
+    // default is only 1hr).
+    cacheControl: "31536000",
+  });
 
   if (uploadError) {
     return NextResponse.json(

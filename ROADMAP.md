@@ -215,6 +215,24 @@ HTML and re-ran the search test directly against the deployed URL ("elephanta" -
       production by fetching real Mumbai tiles directly and confirming the app's own
       attribution text updates. Along the way, also caught and fixed the Supabase
       service-role key being stored as Vercel's "Config" type instead of "Secret".
+- [x] **Seed photos weren't compressed - the actual cause of the slow map load.**
+      User asked whether map load time could be improved. Measured it directly (Resource
+      Timing API + real `fetch`/`HEAD` checks against the live Supabase Storage objects)
+      instead of guessing, and found the 14 seed photos totalled **9.9 MB** at up to
+      1920px/1.5 MB each - full Commons downloads, rendered at 56px in the list and in a
+      2-column gallery grid. Root cause: `scripts/seed.mjs` uploaded straight to Storage,
+      bypassing the `sharp` downscale-and-recompress pipeline that `app/api/spots/route.ts`
+      already applies to user-submitted photos (Stage 3). Fixed by routing seed photos
+      through the identical pipeline (auto-rotate, resize to 1600px, mozjpeg quality 82) -
+      total dropped to **~4.6 MB** (about half), verified by re-fetching the actual
+      re-seeded objects from Storage (1600px, 551 KB for the largest one, confirmed
+      pixel dimensions via `createImageBitmap`). Also gave every upload (seed and
+      user-submitted) an explicit `cacheControl: "31536000"` on the Storage upload call -
+      both paths are immutable in practice (a seed path is only ever overwritten by a
+      deliberate re-seed; a user upload path is a fresh UUID) - Supabase's unset default
+      is only 1 hour, so repeat visits were re-downloading the same ~1 MB images every hour
+      for nothing. Re-seeded the live Supabase project; confirmed 14 spots still render
+      correctly in both list and gallery view after the change.
 
 ---
 
