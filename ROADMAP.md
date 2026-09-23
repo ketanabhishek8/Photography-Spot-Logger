@@ -3,10 +3,11 @@
 Where the app stands and what's left, in the order we'll tackle it. Each stage has a
 "done when" so we know when to move on. Check items off as we go.
 
-**Current state:** Stages 0-3 done in full; Stage 4 done for the two features picked
-(EXIF auto-fill, search/filter) - gallery view, clustering and edit/delete remain
-unbuilt backlog. Stage 5 (auth) not started, not currently planned. Two fixes landed
-outside the stage sequence since: an invisible-input-text bug on dark-mode browsers, and
+**Current state:** Stages 0-3 done in full; Stage 4 done except marker clustering and
+edit/delete, both explicitly deferred (clustering isn't needed yet at 14 spots,
+edit/delete needs real accounts and is deferred to Stage 5). Stage 5 (auth) not
+started, not currently planned. Two fixes landed outside the stage sequence since: an
+invisible-input-text bug on dark-mode browsers, and
 a switch from OpenStreetMap to MapTiler tiles - see "Post-Stage-4 fixes" below.
 
 ---
@@ -150,13 +151,26 @@ search/filter for this pass; the rest stay in the backlog.*
       picker, but this exercises the exact same React code path), and confirmed the pin
       landed at the exact embedded coordinates with the "📍 Filled in..." message shown.
       Also verified the no-GPS path shows the right fallback message instead of erroring.
-- [ ] **Gallery/list view.** A grid toggle alongside the map, useful once spot count grows
-      past what's comfortable to scan in the sidebar list.
-- [ ] **Marker clustering.** Not needed at 14 spots; worth adding once user-submitted
-      spots push the count into the hundreds (`react-leaflet-cluster` or similar).
-- [ ] **Edit/delete own spots.** Currently impossible for anyone, including the person who
-      logged it — RLS only grants `select` + `insert`. Needs either a signed
-      edit-token-per-spot scheme, or real auth (see below).
+- [x] **Gallery/list view.** A two-icon toggle next to the spot count switches the
+      sidebar between the original single-column list and a 2-column photo grid
+      (bigger square thumbnails, same click-to-fly-map behaviour). Map and filters are
+      unaffected - only the sidebar's content changes, matching the original framing of
+      "a grid toggle alongside the map." Shares the same empty-state message and
+      filtering logic as the list, extracted once rather than duplicated. Toggle hides
+      during "Log a spot" (irrelevant there) and the chosen view persists across
+      add/cancel. Verified live: switched views, confirmed the active-state styling
+      (`aria-pressed` + highlight) tracks correctly, confirmed the empty-state message
+      renders in gallery mode too, confirmed the toggle correctly hides/reappears
+      around the add-spot flow.
+- [ ] **Marker clustering.** Skipped - not needed at 14 spots, per the note below.
+      Worth adding once user-submitted spots push the count into the hundreds
+      (`react-leaflet-cluster` or similar). *Explicitly deferred again rather than
+      built ahead of need, when re-asked.*
+- [ ] **Edit/delete own spots.** Skipped for now - deferred to Stage 5, when real
+      accounts exist. A token-based no-auth workaround was considered and declined:
+      it'd mean redoing this properly once auth exists anyway, and a client-side-only
+      token isn't real per-user security. Currently impossible for anyone, including
+      the person who logged it - RLS only grants `select` + `insert`.
 - [x] **Search/filter.** Sidebar now has a text search (matches name + description) and a
       best-time dropdown, both client-side over the already-loaded spots (combines with
       "Near me"). Caught a real bug while building this: the dropdown initially reused

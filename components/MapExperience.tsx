@@ -33,6 +33,7 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
   const [nearbyNote, setNearbyNote] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [bestTimeFilter, setBestTimeFilter] = useState("");
+  const [view, setView] = useState<"list" | "gallery">("list");
 
   const visible = useMemo(() => {
     let list = nearbyIds ? spots.filter((s) => nearbyIds.includes(s.id)) : spots;
@@ -117,11 +118,53 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
           <h1 className="text-lg font-semibold tracking-tight text-stone-900">
             Mumbai Photo Spots
           </h1>
-          <p className="mt-0.5 text-xs text-stone-500">
-            {visible.length === spots.length
-              ? `${spots.length} spot${spots.length === 1 ? "" : "s"} logged`
-              : `${visible.length} of ${spots.length} spots`}
-          </p>
+          <div className="mt-0.5 flex items-center justify-between">
+            <p className="text-xs text-stone-500">
+              {visible.length === spots.length
+                ? `${spots.length} spot${spots.length === 1 ? "" : "s"} logged`
+                : `${visible.length} of ${spots.length} spots`}
+            </p>
+            {!adding && (
+              <div className="flex overflow-hidden rounded-md border border-stone-300">
+                <button
+                  type="button"
+                  onClick={() => setView("list")}
+                  aria-pressed={view === "list"}
+                  aria-label="List view"
+                  title="List view"
+                  className={`px-1.5 py-1 transition ${
+                    view === "list" ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-100"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                      d="M2 4h12M2 8h12M2 12h12"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("gallery")}
+                  aria-pressed={view === "gallery"}
+                  aria-label="Gallery view"
+                  title="Gallery view"
+                  className={`border-l border-stone-300 px-1.5 py-1 transition ${
+                    view === "gallery" ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-100"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor" />
+                    <rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor" />
+                    <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor" />
+                    <rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="mt-3 flex gap-2">
             {!adding && (
@@ -199,7 +242,26 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
                 }}
               />
             </div>
-          ) : (
+          ) : visible.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-stone-400">
+              {filtering ? (
+                <>
+                  No spots match.{" "}
+                  <button
+                    onClick={() => {
+                      setSearch("");
+                      setBestTimeFilter("");
+                    }}
+                    className="text-orange-700 underline"
+                  >
+                    Clear filters
+                  </button>
+                </>
+              ) : (
+                "No spots to show."
+              )}
+            </p>
+          ) : view === "list" ? (
             <ul className="divide-y divide-stone-100">
               {visible.map((spot) => (
                 <li key={spot.id}>
@@ -225,27 +287,36 @@ export default function MapExperience({ spots }: { spots: Spot[] }) {
                   </button>
                 </li>
               ))}
-              {visible.length === 0 && (
-                <li className="px-5 py-8 text-center text-sm text-stone-400">
-                  {filtering ? (
-                    <>
-                      No spots match.{" "}
-                      <button
-                        onClick={() => {
-                          setSearch("");
-                          setBestTimeFilter("");
-                        }}
-                        className="text-orange-700 underline"
-                      >
-                        Clear filters
-                      </button>
-                    </>
-                  ) : (
-                    "No spots to show."
-                  )}
-                </li>
-              )}
             </ul>
+          ) : (
+            // Gallery view: bigger square thumbnails in a 2-column grid, useful
+            // once there are enough spots that scanning the plain list feels
+            // slow - the whole point of adding this alongside the list.
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {visible.map((spot) => (
+                <button
+                  key={spot.id}
+                  onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
+                  className="group text-left"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoUrl(spot.photo_path)}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-square w-full rounded-lg bg-stone-200 object-cover transition group-hover:opacity-90"
+                  />
+                  <span className="mt-1 block truncate text-xs font-medium text-stone-900">
+                    {spot.name}
+                  </span>
+                  {spot.best_time && (
+                    <span className="block truncate text-[11px] text-stone-500">
+                      {spot.best_time}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </aside>
