@@ -172,3 +172,10 @@ project settings (`SUPABASE_SERVICE_ROLE_KEY` as a plain, non-`NEXT_PUBLIC_` var
 Vercel↔Supabase marketplace integration needed, since the app just reads plain env vars).
 Seeding only ran once, locally, against the shared Supabase project — Vercel serves
 whatever is already in that project, it doesn't need its own seed run.
+
+`vercel.json` pins the serverless function region to `bom1` (Mumbai) to match the
+Supabase project's own region — without it Vercel defaults new projects to `iad1` (US
+East), so every server-rendered request and every `/api/spots` call would pay a
+US ↔ India round trip on top of the actual query. Confirm it's taking effect via the
+`x-vercel-id` response header (`curl -sI <url> | grep x-vercel-id`): it prints as
+`<edge-pop>::<function-region>::<id>`, and the function-region segment should read `bom1`.
