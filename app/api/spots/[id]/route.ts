@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { OWNER_TOKEN_COOKIE } from "@/proxy";
-import { PHOTO_BUCKET, PUBLIC_SPOT_COLUMNS, type Spot } from "@/lib/types";
+import {
+  MAX_BEST_TIME_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_NAME_LENGTH,
+  PHOTO_BUCKET,
+  PUBLIC_SPOT_COLUMNS,
+  type Spot,
+} from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -39,15 +46,23 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { name, description, best_time } = (body ?? {}) as Record<string, unknown>;
 
   const trimmedName = String(name ?? "").trim();
+  const trimmedDescription = String(description ?? "").trim();
+  const trimmedBestTime = String(best_time ?? "").trim();
+
   if (!trimmedName) return bad("A spot name is required.");
+  if (trimmedName.length > MAX_NAME_LENGTH) return bad(`Name must be under ${MAX_NAME_LENGTH} characters.`);
+  if (trimmedDescription.length > MAX_DESCRIPTION_LENGTH)
+    return bad(`Description must be under ${MAX_DESCRIPTION_LENGTH} characters.`);
+  if (trimmedBestTime.length > MAX_BEST_TIME_LENGTH)
+    return bad(`Best time must be under ${MAX_BEST_TIME_LENGTH} characters.`);
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("spots")
     .update({
       name: trimmedName,
-      description: String(description ?? "").trim() || null,
-      best_time: String(best_time ?? "").trim() || null,
+      description: trimmedDescription || null,
+      best_time: trimmedBestTime || null,
     })
     .eq("id", id)
     .eq("owner_token", ownerToken)

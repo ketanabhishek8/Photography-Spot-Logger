@@ -79,6 +79,18 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
       <div>
         <label className="mb-1 block text-xs font-medium text-stone-600">Best light</label>
         <select name="best_time" className={field} defaultValue={spot.best_time ?? "Golden hour"}>
+          {/*
+            Seeded/logged spots can carry a best_time outside this curated
+            list (e.g. "Sunset", "Morning" - see MapExperience's
+            availableBestTimes, derived from live data for the same reason).
+            A <select> with no matching <option> silently falls back to
+            showing (and submitting) the first option instead, which would
+            quietly overwrite the real value the moment this form is saved -
+            so make sure the current value is always a selectable option.
+          */}
+          {spot.best_time && !(BEST_TIME_OPTIONS as readonly string[]).includes(spot.best_time) && (
+            <option value={spot.best_time}>{spot.best_time}</option>
+          )}
           {BEST_TIME_OPTIONS.map((t) => (
             <option key={t}>{t}</option>
           ))}

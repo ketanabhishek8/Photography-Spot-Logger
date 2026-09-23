@@ -20,6 +20,24 @@ create table if not exists spots (
   created_at  timestamptz not null default now()
 );
 
+-- Backstop the app-level length limits (lib/types.ts MAX_NAME_LENGTH etc,
+-- enforced in app/api/spots/route.ts and app/api/spots/[id]/route.ts) at the
+-- database itself - the last line of defense if a caller ever bypasses the
+-- API. `not valid` skips checking pre-existing rows on a re-run (none of the
+-- seeded/logged data has ever been close to these limits, but a full-table
+-- validation scan on every schema.sql re-run is needless work).
+alter table spots drop constraint if exists spots_name_length;
+alter table spots add constraint spots_name_length
+  check (char_length(name) <= 120) not valid;
+
+alter table spots drop constraint if exists spots_description_length;
+alter table spots add constraint spots_description_length
+  check (description is null or char_length(description) <= 600) not valid;
+
+alter table spots drop constraint if exists spots_best_time_length;
+alter table spots add constraint spots_best_time_length
+  check (best_time is null or char_length(best_time) <= 60) not valid;
+
 -- Identifies which browser created a spot, so that same browser (no account
 -- needed) can edit/delete it later. Set server-side only from an httpOnly
 -- cookie - client JS never reads or sends it directly. Must never be
@@ -47,19 +65,30 @@ create index if not exists spots_created_idx on spots (created_at desc);
 -- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
--- Public read and public insert (the app has no sign-in), but deliberately NO
--- update or delete policy: with RLS on, anything without a policy is denied,
--- so an anonymous visitor cannot wipe or vandalise the seeded spots.
+-- Public read only. Writes (insert, update, delete) all go through the
+-- service-role key in app/api/spots/ - see the "no anon insert" note below
+-- for why there is deliberately no insert policy either, and the comment
+-- above `grant all on spots to service_role` for how edit/delete stays
+-- scoped to the browser that created a spot even without one.
 alter table spots enable row level security;
 
 drop policy if exists "public read"   on spots;
 drop policy if exists "public insert" on spots;
 
-create policy "public read"   on spots for select to anon, authenticated using (true);
-create policy "public insert" on spots for insert to anon, authenticated with check (true);
+create policy "public read" on spots for select to anon, authenticated using (true);
 
--- No update/delete policy: with RLS on, anything without a policy is
--- denied, so an anonymous visitor cannot wipe or vandalise spots directly.
+-- No insert/update/delete policy: with RLS on, anything without a policy is
+-- denied, so an anonymous visitor cannot write to spots directly at all -
+-- not even to insert a new one. That might look surprising for an app whose
+-- whole point is public no-login logging, but every write already goes
+-- through app/api/spots/route.ts (which validates, compresses the photo with
+-- sharp, rate-limits and sets owner_token) rather than the browser talking
+-- to Supabase directly - the anon key was never meant to write here. An
+-- earlier version of this schema *did* grant anon insert "just in case" -
+-- that was a real hole: the anon key ships in the client bundle, so anyone
+-- could have called the REST API directly, skipped all of the above, and
+-- set is_seed = true (which edit/delete both refuse to ever touch).
+--
 -- Edit/delete of your own spot goes through app/api/spots/[id]/route.ts,
 -- which uses the service_role key (bypasses RLS entirely) and does the
 -- ownership check itself by matching owner_token - see that file.
@@ -70,7 +99,12 @@ create policy "public insert" on spots for insert to anon, authenticated with ch
 -- the grant first. Explicit here so the schema works regardless of that
 -- project setting.
 grant usage on schema public to anon, authenticated, service_role;
-grant insert on spots to anon, authenticated;
+
+-- Revoke insert too, matching the policy change above - GRANT is additive
+-- (see the select revoke/grant pair just below), so an earlier run of this
+-- file that granted insert needs this explicit revoke to actually take it
+-- back, not just removing the `grant insert` line going forward.
+revoke insert, update, delete on spots from anon, authenticated;
 
 -- Revoke the old whole-table select grant before installing the narrower
 -- one below - GRANT is additive, so without this explicit revoke, the

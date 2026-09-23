@@ -2,9 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import sharp from "sharp";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, clientKey } from "@/lib/rateLimit";
-import { OWNER_TOKEN_COOKIE } from "@/proxy";
+import { OWNER_TOKEN_COOKIE, OWNER_TOKEN_COOKIE_OPTIONS } from "@/proxy";
 import {
   ALLOWED_MIME,
+  MAX_BEST_TIME_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_NAME_LENGTH,
   MAX_UPLOAD_BYTES,
   PHOTO_BUCKET,
   PUBLIC_SPOT_COLUMNS,
@@ -56,6 +59,11 @@ export async function POST(request: NextRequest) {
   const photo = form.get("photo");
 
   if (!name) return bad("A spot name is required.");
+  if (name.length > MAX_NAME_LENGTH) return bad(`Name must be under ${MAX_NAME_LENGTH} characters.`);
+  if (description.length > MAX_DESCRIPTION_LENGTH)
+    return bad(`Description must be under ${MAX_DESCRIPTION_LENGTH} characters.`);
+  if (bestTime.length > MAX_BEST_TIME_LENGTH)
+    return bad(`Best time must be under ${MAX_BEST_TIME_LENGTH} characters.`);
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)
     return bad("Latitude must be between -90 and 90.");
   if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)
@@ -154,12 +162,7 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({ spot: data as Spot }, { status: 201 });
   if (setOwnerCookie) {
-    response.cookies.set(OWNER_TOKEN_COOKIE, ownerToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-    });
+    response.cookies.set(OWNER_TOKEN_COOKIE, ownerToken, OWNER_TOKEN_COOKIE_OPTIONS);
   }
   return response;
 }

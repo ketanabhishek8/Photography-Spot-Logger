@@ -8,7 +8,13 @@ import { PUBLIC_SPOT_COLUMNS, type Spot } from "@/lib/types";
  * browser would - a good sanity check that "public read" actually works.
  *
  * Returns null when Supabase is not configured yet so the page can render a
- * setup guide instead of a stack trace.
+ * setup guide instead of a stack trace. A real query error is thrown, not
+ * swallowed into an empty array: a broken read (a bad grant, RLS locking
+ * everyone out, Supabase down) should surface as app/error.tsx's "Something
+ * went wrong" screen, not silently render as "0 spots logged" - which looks
+ * like an empty app rather than a broken one, and is exactly what happened
+ * here once already (a grant change broke this query and the only visible
+ * symptom was the count dropping to zero).
  */
 export async function fetchSpots(): Promise<Spot[] | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,10 +33,7 @@ export async function fetchSpots(): Promise<Spot[] | null> {
     .select(PUBLIC_SPOT_COLUMNS)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("[fetchSpots]", error.message);
-    return [];
-  }
+  if (error) throw new Error(`[fetchSpots] ${error.message}`);
   return (data ?? []) as Spot[];
 }
 

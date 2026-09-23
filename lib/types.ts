@@ -36,6 +36,17 @@ export const DEFAULT_ZOOM = 11;
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8 MB
 export const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 
+/**
+ * Matches the form inputs' `maxLength` (AddSpotForm.tsx, EditSpotForm.tsx), but
+ * enforced again server-side in app/api/spots/route.ts and
+ * app/api/spots/[id]/route.ts - a client-side maxLength is advice, not
+ * enforcement, for anyone calling the API directly. Also backed by CHECK
+ * constraints in supabase/schema.sql as a last line of defense.
+ */
+export const MAX_NAME_LENGTH = 120;
+export const MAX_DESCRIPTION_LENGTH = 600;
+export const MAX_BEST_TIME_LENGTH = 60;
+
 /** Shared between the add-spot form's dropdown and the sidebar's filter. */
 export const BEST_TIME_OPTIONS = [
   "Sunrise",
