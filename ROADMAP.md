@@ -233,6 +233,22 @@ HTML and re-ran the search test directly against the deployed URL ("elephanta" -
       is only 1 hour, so repeat visits were re-downloading the same ~1 MB images every hour
       for nothing. Re-seeded the live Supabase project; confirmed 14 spots still render
       correctly in both list and gallery view after the change.
+- [x] **Vercel function running in the wrong region - the actual "map loads slowly" fix.**
+      User clarified the image-weight fix above wasn't what they meant - the map itself felt
+      slow. Measured with `curl -w` and the `x-vercel-id` response header (format
+      `<edge-pop>::<function-region>::<id>`): every request showed `bom1::iad1::...` - the
+      edge network correctly routed to Mumbai, but the actual Next.js serverless function
+      (which does the Supabase query behind `force-dynamic`) ran in `iad1` (US East,
+      Vercel's default), a continent away from the Supabase project's own South Asia/Mumbai
+      region. Steady-state TTFB was a consistent ~490-500ms - almost exactly a US↔India
+      round trip - on every single page load, before the browser had any HTML to even start
+      loading the map from. Fixed with a `vercel.json` pinning `"regions": ["bom1"]` so the
+      function runs next to the database. Verified for real, not just deployed and assumed:
+      polled `x-vercel-id` until it read `bom1::bom1::...`, then re-measured TTFB - dropped
+      to as low as 115ms, averaging ~258ms across 8 requests (previously a hard floor of
+      ~490ms). Confirmed the app still renders correctly post-deploy. The map's own client
+      bundle (~73KB) and tile requests (14-15ms once mounted) were never the bottleneck -
+      it was the server round-trip that has to finish before the map can even begin loading.
 
 ---
 
