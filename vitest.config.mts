@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 import path from "node:path";
 
@@ -17,7 +17,13 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "node",
       include: ["**/*.test.ts"],
-      exclude: ["node_modules/**", ".next/**"],
+      // A hand-written exclude list REPLACES Vitest's own defaults rather than
+      // adding to them - configDefaults.exclude already covers node_modules at
+      // any depth (**/node_modules/**), which a bare "node_modules/**" doesn't:
+      // that only matches at the repo root, so a nested copy (e.g. a leftover
+      // git worktree under .claude/worktrees/) gets scanned and its bundled
+      // test files run as if they were this project's own.
+      exclude: [...configDefaults.exclude, "**/.next/**", "**/.claude/**"],
     },
     resolve: {
       alias: {
