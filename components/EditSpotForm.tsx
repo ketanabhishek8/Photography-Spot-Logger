@@ -47,13 +47,13 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
   }
 
   const field =
-    "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm " +
-    "outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200";
+    "w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink " +
+    "outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft";
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-4">
       <div>
-        <label className="mb-1 block text-xs font-medium text-stone-600">Spot name</label>
+        <label className="mb-1 block text-xs font-medium text-muted">Spot name</label>
         <input
           name="name"
           required
@@ -64,7 +64,7 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-stone-600">
+        <label className="mb-1 block text-xs font-medium text-muted">
           What makes it good?
         </label>
         <textarea
@@ -77,7 +77,7 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-stone-600">Best light</label>
+        <label className="mb-1 block text-xs font-medium text-muted">Best light</label>
         <select name="best_time" className={field} defaultValue={spot.best_time ?? "Golden hour"}>
           {/*
             Seeded/logged spots can carry a best_time outside this curated
@@ -98,7 +98,7 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
       </div>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+        <p className="rounded-xl bg-danger-soft px-3 py-2 text-xs text-danger" role="alert">
           {error}
         </p>
       )}
@@ -107,16 +107,16 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
         <button
           type="submit"
           disabled={submitting}
-          className="flex-1 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white
-                     transition hover:bg-orange-700 disabled:opacity-60"
+          className="flex-1 rounded-xl bg-accent px-3 py-2 text-sm font-medium text-white
+                     transition hover:bg-accent-hover disabled:opacity-60"
         >
           {submitting ? "Saving..." : "Save changes"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-600
-                     transition hover:bg-stone-50"
+          className="rounded-xl border border-line px-3 py-2 text-sm text-ink
+                     transition hover:bg-accent-soft"
         >
           Cancel
         </button>

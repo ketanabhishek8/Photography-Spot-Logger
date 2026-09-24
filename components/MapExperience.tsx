@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AddSpotForm from "@/components/AddSpotForm";
 import EditSpotForm from "@/components/EditSpotForm";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getSupabase, photoThumbUrl } from "@/lib/supabase/client";
 import type { Spot } from "@/lib/types";
 
@@ -16,7 +17,7 @@ import type { Spot } from "@/lib/types";
 const SpotMap = dynamic(() => import("@/components/SpotMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full items-center justify-center bg-stone-100 text-sm text-stone-400">
+    <div className="flex h-full items-center justify-center bg-paper text-sm text-muted">
       Loading map...
     </div>
   ),
@@ -155,19 +156,22 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   return (
     <div className="flex h-full flex-col lg:flex-row">
       {/* ------------------------------------------------------------- panel */}
-      <aside className="flex w-full shrink-0 flex-col border-b border-stone-200 bg-white lg:h-full lg:w-88 lg:border-b-0 lg:border-r">
-        <header className="border-b border-stone-200 px-5 py-4">
-          <h1 className="text-lg font-semibold tracking-tight text-stone-900">
-            Mumbai Photo Spots
-          </h1>
+      <aside className="flex w-full shrink-0 flex-col border-b border-line bg-paper lg:h-full lg:w-88 lg:border-b-0 lg:border-r">
+        <header className="border-b border-line px-5 py-4">
+          <div className="flex items-start justify-between gap-2">
+            <h1 className="font-display text-xl font-semibold tracking-tight text-ink">
+              Mumbai Photo Spots
+            </h1>
+            <ThemeToggle />
+          </div>
           <div className="mt-0.5 flex items-center justify-between">
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-muted">
               {visible.length === spots.length
                 ? `${spots.length} spot${spots.length === 1 ? "" : "s"} logged`
                 : `${visible.length} of ${spots.length} spots`}
             </p>
             {!editing && (
-              <div className="flex overflow-hidden rounded-md border border-stone-300">
+              <div className="flex overflow-hidden rounded-md border border-line">
                 <button
                   type="button"
                   onClick={() => setView("list")}
@@ -175,7 +179,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                   aria-label="List view"
                   title="List view"
                   className={`px-1.5 py-1 transition ${
-                    view === "list" ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-100"
+                    view === "list" ? "bg-tide text-white" : "text-muted hover:bg-accent-soft"
                   }`}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -193,8 +197,8 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                   aria-pressed={view === "gallery"}
                   aria-label="Gallery view"
                   title="Gallery view"
-                  className={`border-l border-stone-300 px-1.5 py-1 transition ${
-                    view === "gallery" ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-100"
+                  className={`border-l border-line px-1.5 py-1 transition ${
+                    view === "gallery" ? "bg-tide text-white" : "text-muted hover:bg-accent-soft"
                   }`}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -212,29 +216,29 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
             {!editing && (
               <button
                 onClick={startAdding}
-                className="flex-1 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+                className="flex-1 rounded-xl bg-accent px-3 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
               >
                 Log a spot
               </button>
             )}
             <button
               onClick={findNearby}
-              className={`rounded-lg border px-3 py-2 text-sm transition ${
+              className={`rounded-xl border px-3 py-2 text-sm transition ${
                 nearbyIds
-                  ? "border-orange-300 bg-orange-50 text-orange-700"
-                  : "border-stone-300 text-stone-600 hover:bg-stone-50"
+                  ? "border-tide/30 bg-tide/10 text-tide-text"
+                  : "border-line text-ink hover:bg-accent-soft"
               }`}
             >
               {nearbyIds ? "Show all" : "Near me"}
             </button>
           </div>
 
-          {nearbyNote && <p className="mt-2 text-xs text-stone-500">{nearbyNote}</p>}
+          {nearbyNote && <p className="mt-2 text-xs text-muted">{nearbyNote}</p>}
 
           {!editing && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-stone-400">Radius</span>
-              <div className="flex overflow-hidden rounded-md border border-stone-300">
+              <span className="text-xs text-muted">Radius</span>
+              <div className="flex overflow-hidden rounded-md border border-line">
                 {RADIUS_OPTIONS_KM.map((km) => (
                   <button
                     key={km}
@@ -242,7 +246,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                     onClick={() => changeRadius(km)}
                     aria-pressed={radiusKm === km}
                     className={`px-2 py-1 text-xs transition ${
-                      radiusKm === km ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-100"
+                      radiusKm === km ? "bg-tide text-white" : "text-muted hover:bg-accent-soft"
                     }`}
                   >
                     {km} km
@@ -259,14 +263,14 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search spots..."
-                className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm
-                           outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-1.5 text-sm text-ink
+                           outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               />
               <select
                 value={bestTimeFilter}
                 onChange={(e) => setBestTimeFilter(e.target.value)}
-                className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-600
-                           outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                className="rounded-xl border border-line bg-paper px-2 py-1.5 text-sm text-ink
+                           outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
               >
                 <option value="">Any time</option>
                 {availableBestTimes.map((t) => (
@@ -283,7 +287,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
           {adding ? (
             <div className="p-5">
               {picking && !draftPin && (
-                <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                <p className="mb-3 rounded-xl bg-tide/10 px-3 py-2 text-xs text-tide-text">
                   Click anywhere on the map to drop your pin.
                 </p>
               )}
@@ -315,7 +319,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
               }}
             />
           ) : visible.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-stone-400">
+            <p className="px-5 py-8 text-center text-sm text-muted">
               {filtering ? (
                 <>
                   No spots match.{" "}
@@ -324,7 +328,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                       setSearch("");
                       setBestTimeFilter("");
                     }}
-                    className="text-orange-700 underline"
+                    className="text-accent-text underline"
                   >
                     Clear filters
                   </button>
@@ -334,11 +338,11 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
               )}
             </p>
           ) : view === "list" ? (
-            <ul className="divide-y divide-stone-100">
+            <ul className="divide-y divide-line">
               {visible.map((spot) => {
                 const mine = ownedSet.has(spot.id);
                 return (
-                  <li key={spot.id} className="flex items-center gap-1 px-2 transition hover:bg-stone-50">
+                  <li key={spot.id} className="flex items-center gap-1 px-2 transition hover:bg-accent-soft/40">
                     <button
                       onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
                       className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
@@ -347,15 +351,15 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                       <img
                         src={photoThumbUrl(spot.photo_path)}
                         alt=""
-                        className="h-14 w-14 shrink-0 rounded-md bg-stone-200 object-cover"
+                        className="h-14 w-14 shrink-0 rounded-md bg-line object-cover"
                         loading="lazy"
                       />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-stone-900">
+                        <span className="block truncate text-sm font-medium text-ink">
                           {spot.name}
                         </span>
                         {spot.best_time && (
-                          <span className="block text-xs text-stone-500">{spot.best_time}</span>
+                          <span className="block text-xs text-muted">{spot.best_time}</span>
                         )}
                       </span>
                     </button>
@@ -388,13 +392,13 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                         src={photoThumbUrl(spot.photo_path)}
                         alt=""
                         loading="lazy"
-                        className="aspect-square w-full rounded-lg bg-stone-200 object-cover transition group-hover:opacity-90"
+                        className="aspect-square w-full rounded-xl bg-line object-cover transition group-hover:opacity-90"
                       />
-                      <span className="mt-1 block truncate text-xs font-medium text-stone-900">
+                      <span className="mt-1 block truncate text-xs font-medium text-ink">
                         {spot.name}
                       </span>
                       {spot.best_time && (
-                        <span className="block truncate text-[11px] text-stone-500">
+                        <span className="block truncate text-[11px] text-muted">
                           {spot.best_time}
                         </span>
                       )}
@@ -424,6 +428,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
           draftPin={draftPin}
           pickingLocation={picking}
           flyTarget={flyTarget}
+          userCoords={userCoords}
           onPick={(lat, lng) => {
             setDraftPin([lat, lng]);
             setPicking(false);
@@ -447,8 +452,8 @@ function SpotOwnerControls({
   overlay?: boolean;
 }) {
   const btn = overlay
-    ? "rounded-md bg-white/90 p-1 text-stone-600 shadow-sm backdrop-blur transition hover:text-stone-900 disabled:opacity-50"
-    : "shrink-0 rounded-md p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700 disabled:opacity-50";
+    ? "rounded-md bg-paper/90 p-1 text-muted shadow-sm backdrop-blur transition hover:text-ink disabled:opacity-50"
+    : "shrink-0 rounded-md p-1.5 text-muted transition hover:bg-accent-soft hover:text-ink disabled:opacity-50";
 
   return (
     <div className="flex shrink-0 gap-1">

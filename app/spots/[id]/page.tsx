@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import ThemeToggle from "@/components/ThemeToggle";
 import { photoUrl } from "@/lib/supabase/client";
 import { PUBLIC_SPOT_COLUMNS, type Spot } from "@/lib/types";
 
@@ -31,13 +32,18 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-8">
-      <Link href="/" className="text-sm text-orange-700 underline">
-        &larr; Back to the map
-      </Link>
+      <div className="flex items-start justify-between gap-2">
+        <Link href="/" className="text-sm text-accent-text underline">
+          &larr; Back to the map
+        </Link>
+        <ThemeToggle />
+      </div>
 
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight text-stone-900">{spot.name}</h1>
+      <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight text-ink">
+        {spot.name}
+      </h1>
 
-      <p className="mt-1 font-mono text-xs text-stone-500">
+      <p className="mt-1 font-mono text-xs text-muted">
         {spot.latitude.toFixed(5)}, {spot.longitude.toFixed(5)}
         {spot.best_time && <span className="font-sans"> &middot; best at {spot.best_time}</span>}
       </p>
@@ -46,16 +52,16 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
       <img
         src={photoUrl(spot.photo_path)}
         alt={spot.name}
-        className="mt-5 w-full rounded-xl bg-stone-100 object-cover"
+        className="mt-5 w-full rounded-xl bg-line object-cover"
       />
 
       {spot.description && (
-        <p className="mt-5 leading-relaxed text-stone-700">{spot.description}</p>
+        <p className="mt-5 leading-relaxed text-ink">{spot.description}</p>
       )}
 
       {/* CC licences require attribution, so it is stored per spot and shown here. */}
       {spot.attribution && (
-        <p className="mt-6 border-t border-stone-200 pt-4 text-xs text-stone-500">
+        <p className="mt-6 border-t border-line pt-4 text-xs text-muted">
           Photo: {spot.attribution}
           {spot.license && ` (${spot.license})`}
           {spot.source_url && (
@@ -70,7 +76,7 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
         </p>
       )}
 
-      <p className="mt-2 text-xs text-stone-400">
+      <p className="mt-2 text-xs text-muted">
         Added {new Date(spot.created_at).toLocaleDateString()}
       </p>
     </main>

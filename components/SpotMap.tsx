@@ -27,8 +27,20 @@ function pin(color: string, pulse = false) {
   });
 }
 
-const spotIcon = pin("#e0553b");
+/** Centered circular dot + halo - never confusable with the teardrop pins above. */
+function locateIcon(color: string) {
+  return L.divIcon({
+    className: "",
+    html: `<span class="you-are-here" style="--locate:${color}"></span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -9],
+  });
+}
+
+const spotIcon = pin("#c1502e");
 const draftIcon = pin("#2563eb", true);
+const userIcon = locateIcon("#1d6f66");
 
 /** Reports map clicks upward so the add-spot form can capture coordinates. */
 function ClickCapture({ onPick }: { onPick: (lat: number, lng: number) => void }) {
@@ -55,6 +67,7 @@ export type SpotMapProps = {
   pickingLocation: boolean;
   onPick: (lat: number, lng: number) => void;
   flyTarget: [number, number] | null;
+  userCoords: [number, number] | null;
 };
 
 export default function SpotMap({
@@ -63,6 +76,7 @@ export default function SpotMap({
   pickingLocation,
   onPick,
   flyTarget,
+  userCoords,
 }: SpotMapProps) {
   const markers = useMemo(
     () =>
@@ -83,13 +97,15 @@ export default function SpotMap({
                 className="h-32 w-full rounded-md object-cover"
                 loading="lazy"
               />
-              <h3 className="mt-2 text-sm font-semibold leading-tight">{spot.name}</h3>
+              <h3 className="mt-2 font-display text-sm font-semibold leading-tight text-ink">
+                {spot.name}
+              </h3>
               {spot.best_time && (
-                <p className="mt-0.5 text-xs text-stone-500">Best light: {spot.best_time}</p>
+                <p className="mt-0.5 text-xs text-muted">Best light: {spot.best_time}</p>
               )}
               <a
                 href={`/spots/${spot.id}`}
-                className="mt-2 inline-block text-xs font-medium text-orange-700 underline"
+                className="mt-2 inline-block text-xs font-medium text-accent-text underline"
               >
                 View spot
               </a>
@@ -121,6 +137,9 @@ export default function SpotMap({
       />
       {markers}
       {draftPin && <Marker position={draftPin} icon={draftIcon} />}
+      {userCoords && (
+        <Marker position={userCoords} icon={userIcon} alt="Your location" title="You are here" />
+      )}
       {pickingLocation && <ClickCapture onPick={onPick} />}
       <FlyTo target={flyTarget} zoom={15} />
     </MapContainer>

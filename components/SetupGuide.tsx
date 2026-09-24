@@ -21,7 +21,7 @@ export default function SetupGuide() {
       body: (
         <>
           Open the SQL Editor and run the contents of{" "}
-          <code className="rounded bg-stone-100 px-1 py-0.5 text-xs">supabase/schema.sql</code>.
+          <code className="rounded bg-accent-soft px-1 py-0.5 text-xs">supabase/schema.sql</code>.
         </>
       ),
     },
@@ -30,7 +30,7 @@ export default function SetupGuide() {
       body: (
         <>
           Storage &rarr; New bucket, named{" "}
-          <code className="rounded bg-stone-100 px-1 py-0.5 text-xs">spot-photos</code>, marked{" "}
+          <code className="rounded bg-accent-soft px-1 py-0.5 text-xs">spot-photos</code>, marked{" "}
           <strong>public</strong>.
         </>
       ),
@@ -39,8 +39,8 @@ export default function SetupGuide() {
       title: "Add your keys",
       body: (
         <>
-          Copy <code className="rounded bg-stone-100 px-1 py-0.5 text-xs">.env.example</code> to{" "}
-          <code className="rounded bg-stone-100 px-1 py-0.5 text-xs">.env.local</code> and paste in
+          Copy <code className="rounded bg-accent-soft px-1 py-0.5 text-xs">.env.example</code> to{" "}
+          <code className="rounded bg-accent-soft px-1 py-0.5 text-xs">.env.local</code> and paste in
           the project URL, anon key and service-role key from Settings &rarr; API Keys.
         </>
       ),
@@ -48,7 +48,7 @@ export default function SetupGuide() {
     {
       title: "Seed the Mumbai spots",
       body: (
-        <code className="mt-1 block rounded bg-stone-900 px-3 py-2 text-xs text-stone-100">
+        <code className="mt-1 block rounded bg-ink px-3 py-2 text-xs text-paper">
           node --env-file=.env.local scripts/seed.mjs
         </code>
       ),
@@ -57,28 +57,28 @@ export default function SetupGuide() {
 
   return (
     <main className="mx-auto max-w-xl px-6 py-16">
-      <h1 className="text-2xl font-semibold tracking-tight text-stone-900">
+      <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
         Mumbai Photo Spots
       </h1>
-      <p className="mt-2 text-sm text-stone-600">
+      <p className="mt-2 text-sm text-muted">
         Almost there - the app just needs its Supabase project.
       </p>
 
       <ol className="mt-8 space-y-5">
         {steps.map((step, i) => (
           <li key={step.title} className="flex gap-4">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xs font-medium text-white">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-white">
               {i + 1}
             </span>
             <div>
-              <h2 className="text-sm font-medium text-stone-900">{step.title}</h2>
-              <div className="mt-1 text-sm text-stone-600">{step.body}</div>
+              <h2 className="text-sm font-medium text-ink">{step.title}</h2>
+              <div className="mt-1 text-sm text-muted">{step.body}</div>
             </div>
           </li>
         ))}
       </ol>
 
-      <p className="mt-8 text-xs text-stone-400">
+      <p className="mt-8 text-xs text-muted">
         Restart the dev server after editing .env.local.
       </p>
     </main>

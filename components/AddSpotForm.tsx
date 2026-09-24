@@ -98,18 +98,18 @@ export default function AddSpotForm({
   }
 
   const field =
-    "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm " +
-    "outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200";
+    "w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink " +
+    "outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft";
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <div>
-        <label className="mb-1 block text-xs font-medium text-stone-600">Spot name</label>
+        <label className="mb-1 block text-xs font-medium text-muted">Spot name</label>
         <input name="name" required maxLength={120} className={field} placeholder="Carter Road jetty" />
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-stone-600">
+        <label className="mb-1 block text-xs font-medium text-muted">
           What makes it good?
         </label>
         <textarea
@@ -122,7 +122,7 @@ export default function AddSpotForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-stone-600">Best light</label>
+        <label className="mb-1 block text-xs font-medium text-muted">Best light</label>
         <select name="best_time" className={field} defaultValue="Golden hour">
           {BEST_TIME_OPTIONS.map((t) => (
             <option key={t}>{t}</option>
@@ -131,11 +131,11 @@ export default function AddSpotForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-stone-600">Photo</label>
+        <label className="mb-1 block text-xs font-medium text-muted">Photo</label>
         <label
-          className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed
-                     border-stone-300 bg-stone-50 px-3 py-4 text-xs text-stone-500
-                     transition hover:border-orange-400 hover:text-orange-700"
+          className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed
+                     border-line bg-accent-soft/40 px-3 py-4 text-xs text-muted
+                     transition hover:border-accent hover:text-accent-text"
         >
           <input
             type="file"
@@ -148,36 +148,36 @@ export default function AddSpotForm({
           {fileName ?? "Choose a JPEG, PNG or WebP (max 8 MB)"}
         </label>
         {exifStatus === "checking" && (
-          <p className="mt-1 text-xs text-stone-400">Checking photo for location data...</p>
+          <p className="mt-1 text-xs text-muted">Checking photo for location data...</p>
         )}
       </div>
 
-      <div className="rounded-lg bg-stone-50 p-3">
+      <div className="rounded-xl bg-accent-soft/40 p-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-stone-600">Location</span>
+          <span className="text-xs font-medium text-muted">Location</span>
           <button
             type="button"
             onClick={onRequestPick}
-            className="text-xs font-medium text-orange-700 underline"
+            className="text-xs font-medium text-accent-text underline"
           >
             {draftPin ? "Pick again" : "Pick on map"}
           </button>
         </div>
-        <p className="mt-1 font-mono text-xs text-stone-500">
+        <p className="mt-1 font-mono text-xs text-muted">
           {draftPin
             ? `${draftPin[0].toFixed(5)}, ${draftPin[1].toFixed(5)}`
             : "Click the map to drop a pin"}
         </p>
         {exifStatus === "found" && (
-          <p className="mt-1 text-xs text-emerald-700">📍 Filled in from the photo&apos;s location data</p>
+          <p className="mt-1 text-xs text-tide-text">📍 Filled in from the photo&apos;s location data</p>
         )}
         {exifStatus === "none" && !draftPin && (
-          <p className="mt-1 text-xs text-stone-400">No location data in that photo - pick it on the map.</p>
+          <p className="mt-1 text-xs text-muted">No location data in that photo - pick it on the map.</p>
         )}
       </div>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+        <p className="rounded-xl bg-danger-soft px-3 py-2 text-xs text-danger" role="alert">
           {error}
         </p>
       )}
@@ -186,16 +186,16 @@ export default function AddSpotForm({
         <button
           type="submit"
           disabled={submitting}
-          className="flex-1 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white
-                     transition hover:bg-orange-700 disabled:opacity-60"
+          className="flex-1 rounded-xl bg-accent px-3 py-2 text-sm font-medium text-white
+                     transition hover:bg-accent-hover disabled:opacity-60"
         >
           {submitting ? "Saving..." : "Save spot"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-600
-                     transition hover:bg-stone-50"
+          className="rounded-xl border border-line px-3 py-2 text-sm text-ink
+                     transition hover:bg-accent-soft"
         >
           Cancel
         </button>

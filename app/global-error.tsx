@@ -23,16 +23,16 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
           padding: "0 24px",
         }}
       >
-        <h1 style={{ fontSize: "1.125rem", fontWeight: 600 }}>Something went wrong</h1>
-        <p style={{ marginTop: 8, color: "#57534e", maxWidth: 360 }}>
+        <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#1c1b19" }}>Something went wrong</h1>
+        <p style={{ marginTop: 8, color: "#8a8171", maxWidth: 360 }}>
           The app failed to load. Try again in a moment.
         </p>
         <button
           onClick={reset}
           style={{
             marginTop: 20,
-            borderRadius: 8,
-            background: "#ea580c",
+            borderRadius: 12,
+            background: "#c1502e",
             color: "#fff",
             padding: "8px 16px",
             fontSize: "0.875rem",

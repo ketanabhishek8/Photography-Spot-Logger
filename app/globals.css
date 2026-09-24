@@ -2,30 +2,92 @@
 
 :root {
   /*
-   * This app has no real dark theme - the sidebar, forms and popups all
-   * hardcode light (stone/white) colors with no dark: variants. Declaring
-   * color-scheme: light keeps the browser's native form-control rendering
-   * (inputs, selects) in light mode too; without it, a dark-mode browser
-   * paints those controls with light text on top of our explicit bg-white,
-   * making anything typed in a search box or form field unreadable.
+   * color-scheme controls native form-control rendering (inputs, selects,
+   * scrollbars) - it must track the active theme, not just follow the OS,
+   * otherwise a light-mode toggle inside a dark-mode browser (or vice
+   * versa) gets native controls painted in the wrong scheme on top of our
+   * explicit bg-paper, making anything typed in a field unreadable. The
+   * ThemeToggle component (components/ThemeToggle.tsx) sets data-theme on
+   * <html> before paint (via the inline script in app/layout.tsx), so this
+   * default only applies for the instant before that script runs.
    */
   color-scheme: light;
-  --background: #ffffff;
-  --foreground: #171717;
+
+  /* "Mumbai coastal dusk" palette - warm neutrals instead of generic gray,
+     terracotta as the primary accent instead of generic orange, plus a
+     second accent (deep teal) so mode toggles and the user-location marker
+     read as distinct from primary actions rather than just "a darker gray".
+     --color-accent/--color-tide are tuned for a solid fill with white text
+     on top (buttons, active toggle states); --color-accent-text/
+     --color-tide-text are separate, lighter-in-dark-mode variants for bare
+     text on the page background, where the fill values alone don't have
+     enough contrast against a near-black dark background (verified against
+     WCAG AA - see the dark block below). */
+  --color-ink: #1c1b19;
+  --color-paper: #faf7f2;
+  --color-line: #e7e0d4;
+  --color-muted: #8a8171;
+  --color-accent: #c1502e;
+  --color-accent-hover: #a43f22;
+  --color-accent-soft: #f4e3d7;
+  --color-accent-text: #c1502e;
+  --color-tide: #1d6f66;
+  --color-tide-text: #1d6f66;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef2f2;
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+}
+
+/* Dark theme - set by ThemeToggle via data-theme="dark" on <html>. Every
+   component already reads colors through the tokens above (bg-paper,
+   text-ink, text-accent-text, etc.), so redefining the tokens here is
+   enough to re-theme the whole app; --color-accent/--color-tide (the
+   solid-fill values, used with white button text) stay the same as light
+   mode since they were already dark enough for AA contrast with white in
+   either theme - only the bare-text and background/border tokens change. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-ink: #f2ede4;
+  --color-paper: #1a1712;
+  --color-line: #38342a;
+  --color-muted: #a89f8c;
+  --color-accent-hover: #d3623d;
+  --color-accent-soft: #3a2415;
+  --color-accent-text: #e2734c;
+  --color-tide-text: #5cc4b5;
+  --color-danger: #fca5a5;
+  --color-danger-soft: #3b1616;
 }
 
 @theme inline {
   --spacing-88: 22rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ink: var(--color-ink);
+  --color-paper: var(--color-paper);
+  --color-line: var(--color-line);
+  --color-muted: var(--color-muted);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-accent-text: var(--color-accent-text);
+  --color-tide: var(--color-tide);
+  --color-tide-text: var(--color-tide-text);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* ---------------------------------------------------------------------------
@@ -52,9 +114,45 @@ body {
   50%      { transform: rotate(-45deg) scale(1.18); }
 }
 
+/* "You are here" marker - deliberately a plain circle + halo rather than the
+   teardrop .spot-pin shape above, so it can never be mistaken for a spot or
+   the draft pin even at a glance. */
+.you-are-here {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--locate, #1d6f66);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+
+.you-are-here::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--locate, #1d6f66);
+  opacity: 0.18;
+  animation: locate-pulse 2s ease-in-out infinite;
+}
+
+@keyframes locate-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.18; }
+  50%      { transform: scale(1.6); opacity: 0.05; }
+}
+
 /* Leaflet injects its own popup chrome; soften it to match the panel. */
-.leaflet-popup-content-wrapper { border-radius: 12px; }
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+}
 .leaflet-popup-content { margin: 12px; }
+.leaflet-popup-tip { background: var(--color-paper); }
 
 /* The app is a full-height map shell, so never let the page itself scroll. */
 html, body { overscroll-behavior: none; }

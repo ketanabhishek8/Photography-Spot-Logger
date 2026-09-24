@@ -22,13 +22,13 @@ export default function Error({
 
   return (
     <main className="flex h-dvh flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-lg font-semibold text-stone-900">Something went wrong</h1>
-      <p className="mt-2 max-w-sm text-sm text-stone-600">
+      <h1 className="font-display text-lg font-semibold text-ink">Something went wrong</h1>
+      <p className="mt-2 max-w-sm text-sm text-muted">
         The map couldn&apos;t load. This is usually temporary - try again in a moment.
       </p>
       <button
         onClick={reset}
-        className="mt-5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+        className="mt-5 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
       >
         Try again
       </button>
