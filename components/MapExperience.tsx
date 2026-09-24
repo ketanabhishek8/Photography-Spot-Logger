@@ -156,7 +156,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   return (
     <div className="flex h-full flex-col lg:flex-row">
       {/* ------------------------------------------------------------- panel */}
-      <aside className="flex w-full shrink-0 flex-col border-b border-line bg-paper lg:h-full lg:w-88 lg:border-b-0 lg:border-r">
+      <aside className="flex h-[45vh] w-full shrink-0 flex-col border-b border-line bg-paper lg:h-full lg:w-88 lg:border-b-0 lg:border-r">
         <header className="border-b border-line px-5 py-4">
           <div className="flex items-start justify-between gap-2">
             <h1 className="font-display text-xl font-semibold tracking-tight text-ink">
