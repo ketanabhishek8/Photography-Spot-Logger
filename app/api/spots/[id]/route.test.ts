@@ -89,13 +89,19 @@ describe("PATCH/DELETE /api/spots/[id] validation (no DB)", () => {
 // SUPABASE_SERVICE_ROLE_KEY isn't available (e.g. a CI run with no repo
 // secrets configured), same pattern as scripts/seed.mjs's --dry-run guard.
 describe.skipIf(!hasCreds)("PATCH/DELETE /api/spots/[id] ownership (real Supabase)", () => {
-  const supabase = createAdminClient();
+  // Declared here but only assigned inside beforeAll(), which respects
+  // skipIf - describe()'s own callback body runs during Vitest's collection
+  // phase regardless of skipIf, so calling createAdminClient() (which
+  // throws without credentials) at this level would blow up collection
+  // itself even when hasCreds is false, defeating the skip entirely.
+  let supabase: ReturnType<typeof createAdminClient>;
   const ownerToken = `vitest-owner-${crypto.randomUUID()}`;
   const wrongToken = `vitest-wrong-${crypto.randomUUID()}`;
   let spotId: string;
   let seedSpotId: string;
 
   beforeAll(async () => {
+    supabase = createAdminClient();
     const { data, error } = await supabase
       .from("spots")
       .insert({
