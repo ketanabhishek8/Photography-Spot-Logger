@@ -2,13 +2,56 @@
 
 What this project still needs, in priority order. Each item names the problem, why it
 matters and where the fix goes. Checked against the code on 2026-09-23, not written
-from memory.
+from memory. Re-checked against the code **and the live database** on 2026-09-24.
+
+---
+
+## Re-review (2026-09-24): what's actually still wrong
+
+Ranked by how much each one matters. Everything here was checked by running
+something today, not taken from earlier notes in this file.
+
+1. **The P0 #1 security hole is still open on the live database.**
+   `npx vitest run tests/security.test.ts` still fails on `a direct anon insert is
+   rejected`: a plain `POST` to `/rest/v1/spots` with the public anon key succeeds.
+   The code side landed on 2026-09-23 and this file marked it done, but the SQL never ran
+   against the live project. Anyone can still insert rows directly, including
+   `is_seed = true` rows that the app can never delete. The `CHECK` constraints from #3
+   aren't live either. **This is the most important open item in the file.** Fix it by
+   running only this in the Supabase SQL editor. Don't re-run the whole `schema.sql`,
+   which also rebuilds `geog` (see #8):
+   ```sql
+   drop policy if exists "public insert" on spots;
+   revoke insert, update, delete on spots from anon, authenticated;
+   alter table spots add constraint spots_name_length
+     check (char_length(name) <= 120) not valid;
+   alter table spots add constraint spots_description_length
+     check (description is null or char_length(description) <= 600) not valid;
+   alter table spots add constraint spots_best_time_length
+     check (best_time is null or char_length(best_time) <= 60) not valid;
+   ```
+   Then re-run `npx vitest run tests/security.test.ts`. It should pass 4/4.
+2. **CI is green but can't see #1.** Every DB-backed test skips in CI because the repo
+   has no Supabase secrets, so a green check says nothing about the database. See #5.
+3. **The tests write to the production table.** See new item #19.
+4. **Leftover worktree files leak into local lint and test runs.** Today `npm test`
+   reported 12 failing suites from `zod` and `tsconfig-paths` internals under
+   `.claude/worktrees/…/node_modules`. See new item #20.
+5. **The map fails silently when tiles fail.** This caused a real production outage
+   today. See new item #21.
+6. **Marker clustering (#11) is now due.** The trigger this file set for it has been
+   reached.
+7. **The docs are out of date.** The README still says 22 spots and doesn't mention dark
+   mode. See #18.
 
 ---
 
 ## P0 — Security holes
 
-### 1. Close the direct anon insert path ✅ done
+### 1. Close the direct anon insert path ⚠️ code done, NOT applied to the live database
+> **2026-09-24:** still open in production. The security test fails against the live
+> project. The exact SQL to run is in the Re-review section at the top.
+
 **Problem.** `supabase/schema.sql` still has the `public insert` RLS policy and
 `grant insert on spots to anon, authenticated`. The anon key ships in the JS bundle, so
 anyone can `POST` straight to `…/rest/v1/spots` and skip everything in
@@ -48,7 +91,11 @@ the cookie options into one shared constant so the two copies can't drift apart.
 `secure: process.env.NODE_ENV === "production"`), used by both `cookies.set` call
 sites so they can't drift apart.
 
-### 3. Enforce length limits on the server ✅ done
+### 3. Enforce length limits on the server ✅ done (API) / ⚠️ DB constraints not live
+> **2026-09-24:** the API checks are live. The `CHECK` constraints only matter for writes
+> that bypass the API, and #1 being open is exactly how those happen, so apply both
+> together.
+
 **Problem.** `name` (120) and `description` (600) are capped only by `maxLength` on the
 form inputs. Neither `POST /api/spots` nor `PATCH /api/spots/[id]` checks length.
 
@@ -109,7 +156,19 @@ current state as of this writing: `npm test` shows one real, expected failure
 section above is run in the SQL editor - a good sign the test is trustworthy, not a bug
 to paper over.
 
-### 5. Add CI ✅ done
+### 5. Add CI ✅ done, but see below
+> **2026-09-24:** CI was actually **red on every run** from the day it was added until
+> commit `8e953d7`. In `app/api/spots/[id]/route.test.ts`, `createAdminClient()` was
+> called directly in the body of `describe.skipIf(...)`. That body still runs during
+> collection, so the suite threw before the skip could apply. It's fixed now and CI is
+> green. But the green means little: without secrets, every DB-backed test skips,
+> including the one that would catch #1. **Next step:** once #1 is applied, add
+> `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and
+> `SUPABASE_SERVICE_ROLE_KEY` as repo secrets. Order matters. With anon creds but no
+> service-role key, a still-open hole would leave a probe row in the live table on every
+> run, because the test's cleanup needs the service role. Ideally point these at a
+> separate test project rather than production (#19).
+
 **Problem.** No `.github/workflows`. Lint, typecheck and build only run when someone
 remembers to run them locally.
 
@@ -155,6 +214,55 @@ records which changes have been applied.
 change, applied with `supabase db push`. Keep `schema.sql` as a generated snapshot or
 delete it.
 
+> **2026-09-24:** #1 is exactly the failure this item predicts: a schema change was
+> written, marked done, and never applied, with nothing recording that. Migrations
+> tracked in a table would have shown it as pending.
+
+### 19. Tests write to the production database *(new, 2026-09-24)*
+**Problem.** The ownership tests in `app/api/spots/[id]/route.test.ts` insert real rows
+into the live `spots` table and delete them afterwards. The anon-insert test in
+`tests/security.test.ts` does the same whenever the hole is open. Every local
+`npm test`, and every CI run once secrets are added, briefly writes to the table the
+public site reads from.
+
+**Why it matters.** A crash between insert and cleanup leaves a `vitest ownership test …`
+row on the public map. It can also be a seed-flagged one, which the app can never delete.
+
+**Fix.** Create a second free Supabase project (or a branch) just for tests, run
+`schema.sql` there, and give the tests and CI its keys instead of production's.
+
+### 20. Local tooling picks up `.claude/worktrees/` *(new, 2026-09-24)*
+**Problem.** `vitest.config.mts` sets `exclude: ["node_modules/**", ".next/**"]`. A
+custom `exclude` **replaces** Vitest's defaults (which include `**/node_modules/**`),
+and these patterns only match at the repo root. `eslint.config.mjs` has the same
+root-only `.next/**`. So the worktree a background session left at
+`.claude/worktrees/upbeat-visvesvaraya-38f86a/` gets scanned. `npm test` reports 12
+failing suites from third-party packages, and `npm run lint` lints that worktree's
+compiled `.next` chunks.
+
+**Fix.**
+- In `vitest.config.mts`, use `exclude: [...configDefaults.exclude, "**/.next/**", "**/.claude/**"]`
+  (import `configDefaults` from `vitest/config`).
+- In `eslint.config.mjs`, change `.next/**` to `**/.next/**` and add `.claude/**`.
+- Add `.claude/worktrees/` to `.gitignore`.
+- Remove the stale worktree and its branch. Its only change, the mobile map height fix,
+  is already on `main` as `4edae18`:
+  `git worktree remove .claude/worktrees/upbeat-visvesvaraya-38f86a && git branch -D claude/upbeat-visvesvaraya-38f86a`.
+
+### 21. The map fails silently when tiles fail *(new, 2026-09-24)*
+**Problem.** Today MapTiler returned `403 Key usage restricted` for every tile, because
+the key's allowed origins didn't include the production host. The map showed grey
+squares with pins on them. Nothing in the app said what was wrong, and nothing in the
+console was obviously related.
+
+**Fix.**
+- Listen for Leaflet's `tileerror` in `SpotMap.tsx`. After a few failures, switch the
+  `TileLayer` URL to the keyless OpenStreetMap default that's already there as the
+  fallback in `TILE_URL`. A degraded map beats a blank one.
+- Add one line to the README's deploy section: the MapTiler key's allowed origins must
+  include the production hostname, and any custom domain added later. `.env.example`
+  mentions restricting origins but doesn't warn that production must be on the list.
+
 ---
 
 ## P2 — Performance
@@ -197,9 +305,15 @@ layout shift for `width`/`height` attributes to prevent; the box holds its size 
 the image ever loads. Correcting the original rating rather than adding a no-op
 `width`/`height` pair just to check the box.
 
-### 11. Marker clustering, once it's needed
+### 11. Marker clustering ⚠️ now due
 Still unnecessary at 22 spots. Add `react-leaflet-cluster` when user-added spots push the
 count toward ~100, when overlapping pins in the Fort/Colaba area start hiding each other.
+
+> **2026-09-24:** the second trigger has been hit before the first. At 44 spots, the
+> Fort/Colaba/Kala Ghoda group (CSMT, Flora Fountain, Horniman Circle, Rajabai, CSMVS,
+> Knesset Eliyahoo, St. Thomas Cathedral, Gateway) stacks into one overlapping blob at
+> the default zoom, and you can't click individual pins without zooming in first. Worth
+> doing now.
 
 ---
 
@@ -250,6 +364,15 @@ Leaflet pins show up in the accessibility tree as unlabelled buttons (confirmed 
 `button "Mount Mary Church"`, etc., where before every one of the 22 was an unlabelled
 `button` with no accessible name.
 
+### 22. Map tiles stay bright in dark mode *(new, 2026-09-24)*
+Everything but the map follows the theme. In dark mode the map is a large bright
+rectangle next to a near-black sidebar, which is the main thing that makes dark mode
+look unfinished. MapTiler has dark raster styles. Pick the tile URL from the active
+`data-theme`: `SpotMap.tsx` can read it through the same `useSyncExternalStore`
+subscription `ThemeToggle.tsx` uses, and the `TileLayer`'s `url` prop will pick up the
+change. Open an actual tile from the dark style before switching to it. A `200` alone
+doesn't prove the style name exists; it can come back as a placeholder image.
+
 ### 17. Edit photo and location
 Editing currently covers name, description and best time only. Letting people replace
 the photo or move the pin means reusing the upload + `sharp` + orphan-cleanup path from
@@ -266,9 +389,16 @@ how it was checked. That history is useful, but it buries current status. Move t
 narrative to `CHANGELOG.md` or `docs/history.md` and keep the roadmap to a short
 checklist of done / not planned / next.
 
+> **2026-09-24:** still open, and the README has drifted too. It says "22 real Mumbai
+> spots" and "Expect 22 `ok` lines" (it's 44 now), and it doesn't mention dark mode, the
+> theme toggle or the "you are here" marker.
+
 ---
 
-## Quick wins ✅ all done (2026-09-23)
+## Quick wins (2026-09-23): code done, database half still pending
+
+> **2026-09-24:** the heading used to say "✅ all done". The code is done, but the
+> database half of #1 and #3 is still pending. See the Re-review section at the top.
 
 These were done in one sitting and fix the most important problems:
 
