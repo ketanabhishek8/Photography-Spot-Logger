@@ -171,10 +171,14 @@ upload/resize path, and "delete, then re-log it" already covers that.
   anon key could read every row's token straight from the REST API and forge ownership
   of any spot.
 - **Map tiles** come from MapTiler (`NEXT_PUBLIC_TILE_URL`/`NEXT_PUBLIC_TILE_ATTRIBUTION` —
-  see `.env.example`), free tier, no credit card, key restricted by HTTP origin. Falls back
-  to OpenStreetMap's own tile server if those env vars are unset, so cloning the repo
-  without a MapTiler key still works, just plainer. Whichever provider is active, the URL
-  is swappable with no code change.
+  see `.env.example`), free tier, no credit card, key restricted by HTTP origin. **The
+  key's allowed origins in the MapTiler dashboard must include the production hostname**
+  (and any custom domain added later) — a key that only allows `localhost` works in dev
+  and fails silently in prod, which happened for real once already. `SpotMap.tsx` falls
+  back to keyless OpenStreetMap tiles after a run of tile errors from whichever provider
+  is configured, so a bad key degrades the map instead of leaving it blank; cloning the
+  repo without a MapTiler key at all also just works, plainer. Whichever provider is
+  active, the URL is swappable with no code change.
 - **Uploads** are capped at 8 MB, then downscaled server-side to 1600px wide with `sharp`
   before being stored (EXIF-oriented first, so re-encoded photos don't come out sideways).
   The seed script runs the exact same pipeline on the Commons downloads, so the pre-loaded

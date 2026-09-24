@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -11,6 +11,58 @@ const TILE_URL = process.env.NEXT_PUBLIC_TILE_URL || "https://{s}.tile.openstree
 const TILE_ATTRIBUTION =
   process.env.NEXT_PUBLIC_TILE_ATTRIBUTION ||
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+// Keyless fallback so a broken tile provider (an expired/misconfigured
+// MapTiler key, a quota run out) degrades to a working map instead of
+// leaving it blank - this happened for real once already (IMPROVEMENTS.md
+// #21). Identical to TILE_URL's own default, so when no MapTiler key is
+// configured at all this is simply a no-op once triggered.
+const FALLBACK_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const FALLBACK_TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// A handful of blips (one bad tile at the edge of the viewport, a flaky
+// connection) shouldn't flip the whole map over - only a real, sustained
+// failure of the configured provider should.
+const TILE_ERROR_THRESHOLD = 6;
+
+/** Falls back to keyless OpenStreetMap tiles after the primary provider
+ * fails repeatedly, instead of leaving the map blank. */
+function ResilientTileLayer() {
+  const [useFallback, setUseFallback] = useState(false);
+  const errorCount = useRef(0);
+
+  const eventHandlers = useMemo(
+    () => ({
+      tileerror: () => {
+        if (useFallback) return; // already degraded; don't keep counting
+        errorCount.current += 1;
+        if (errorCount.current >= TILE_ERROR_THRESHOLD) {
+          console.warn(
+            `[SpotMap] tile provider failed ${TILE_ERROR_THRESHOLD}+ times, falling back to OpenStreetMap`,
+          );
+          setUseFallback(true);
+        }
+      },
+    }),
+    [useFallback],
+  );
+
+  return (
+    <TileLayer
+      // Defaults to OpenStreetMap's own tile server, which needs no API key
+      // but explicitly disallows heavy/commercial traffic per their usage
+      // policy (operations.osmfoundation.org/policies/tiles). This app
+      // actually runs on MapTiler's free tier via NEXT_PUBLIC_TILE_URL/
+      // _ATTRIBUTION (no code change needed to switch providers - see
+      // .env.example for the verified URL format and setup notes).
+      attribution={useFallback ? FALLBACK_TILE_ATTRIBUTION : TILE_ATTRIBUTION}
+      url={useFallback ? FALLBACK_TILE_URL : TILE_URL}
+      maxZoom={19}
+      detectRetina={!useFallback} // MapTiler's {r} URL token supports sharper high-DPI tiles; skip it on the OSM fallback to keep request volume down, per their usage policy above
+      eventHandlers={eventHandlers}
+    />
+  );
+}
 
 /**
  * Leaflet's default marker icons are resolved by URL and bundlers rewrite those
@@ -123,18 +175,7 @@ export default function SpotMap({
       scrollWheelZoom
       className={`h-full w-full ${pickingLocation ? "cursor-crosshair" : ""}`}
     >
-      <TileLayer
-        // Defaults to OpenStreetMap's own tile server, which needs no API key
-        // but explicitly disallows heavy/commercial traffic per their usage
-        // policy (operations.osmfoundation.org/policies/tiles). This app
-        // actually runs on MapTiler's free tier via NEXT_PUBLIC_TILE_URL/
-        // _ATTRIBUTION (no code change needed to switch providers - see
-        // .env.example for the verified URL format and setup notes).
-        attribution={TILE_ATTRIBUTION}
-        url={TILE_URL}
-        maxZoom={19}
-        detectRetina // MapTiler's {r} URL token supports sharper high-DPI tiles
-      />
+      <ResilientTileLayer />
       {markers}
       {draftPin && <Marker position={draftPin} icon={draftIcon} />}
       {userCoords && (
