@@ -36,13 +36,18 @@ something today, not taken from earlier notes in this file.
 3. **The tests write to the production table.** See new item #19.
 4. **Leftover worktree files leak into local lint and test runs.** Today `npm test`
    reported 12 failing suites from `zod` and `tsconfig-paths` internals under
-   `.claude/worktrees/…/node_modules`. See new item #20.
+   `.claude/worktrees/…/node_modules`. See new item #20. ✅ **fixed same day** -
+   depth-independent exclude patterns in both configs, stale worktree removed.
 5. **The map fails silently when tiles fail.** This caused a real production outage
-   today. See new item #21.
+   today. See new item #21. ✅ **fixed same day** - falls back to OpenStreetMap tiles
+   after a sustained run of errors from the configured provider.
 6. **Marker clustering (#11) is now due.** The trigger this file set for it has been
-   reached.
+   reached. ✅ **fixed same day** - see #11.
 7. **The docs are out of date.** The README still says 22 spots and doesn't mention dark
-   mode. See #18.
+   mode. See #18. Still open.
+
+Items 1-3 are still open and need your action (the SQL migration, then repo secrets,
+then a separate test project) - everything else checked today (4-6) is now fixed.
 
 ---
 
