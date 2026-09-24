@@ -33,7 +33,7 @@
     "longitude": 72.8172,
     "best_time": "Blue hour",
     "description": "Cable-stayed bridge across Mahim Bay. Shoot the cable geometry from Bandra Bandstand or the Worli Sea Face promenade.",
-    "commons_file": "Bandra\u2013Worli Sea Link.jpg"
+    "commons_file": "Bandra–Worli Sea Link.jpg"
   },
   {
     "slug": "haji-ali-dargah",
@@ -196,5 +196,203 @@
     "best_time": "Golden hour",
     "description": "Twin-spired basilica on a hilltop above Bandra, overlooking the sea. The facade catches warm light well before sunset.",
     "commons_file": "Mount Mary Church (Bombay).jpg"
+  },
+  {
+    "slug": "mahim-fort",
+    "name": "Mahim Fort",
+    "latitude": 19.0420113,
+    "longitude": 72.8381267,
+    "best_time": "Early morning",
+    "description": "Seafront ruin at the mouth of Mahim Bay, with a clear line of sight to the Bandra-Worli Sea Link across the water.",
+    "commons_file": "Mahim Fort 6.jpg"
+  },
+  {
+    "slug": "st-thomas-cathedral",
+    "name": "St. Thomas Cathedral",
+    "latitude": 18.93166667,
+    "longitude": 72.83361111,
+    "best_time": "Morning",
+    "description": "Mumbai's oldest Anglican church, tucked behind Horniman Circle. Soft light through the stained glass works best a couple of hours after sunrise.",
+    "commons_file": "St. Thomas Cathedral, Mumbai.jpg"
+  },
+  {
+    "slug": "mani-bhavan",
+    "name": "Mani Bhavan",
+    "latitude": 18.95993,
+    "longitude": 72.81137,
+    "best_time": "Morning",
+    "description": "Gandhi's Mumbai residence from 1917 to 1934, now a small museum on a quiet Gamdevi lane.",
+    "commons_file": "Mani Bhavan - Gandhi's house in Mumbai.jpg"
+  },
+  {
+    "slug": "bhau-daji-lad-museum",
+    "name": "Dr. Bhau Daji Lad Museum",
+    "latitude": 18.9791636,
+    "longitude": 72.8348012,
+    "best_time": "Late morning",
+    "description": "Palladian-style museum building inside Byculla's Rani Baug, restored down to its cast-iron detailing.",
+    "commons_file": "Dr. Bhau Daji Lad Museum, esterno 01.jpg"
+  },
+  {
+    "slug": "knesset-eliyahoo-synagogue",
+    "name": "Knesset Eliyahoo Synagogue",
+    "latitude": 18.9281112,
+    "longitude": 72.8326041,
+    "best_time": "Morning",
+    "description": "Sky-blue Sephardic synagogue on a Kala Ghoda side street, one of the most photographed facades in Fort.",
+    "commons_file": "Keneseth Eliyahoo Synagogue 1.jpg"
+  },
+  {
+    "slug": "gilbert-hill",
+    "name": "Gilbert Hill",
+    "latitude": 19.12083333,
+    "longitude": 72.84006667,
+    "best_time": "Evening",
+    "description": "A 200-foot basalt monolith rising straight out of an Andheri suburb - one of the few of its kind outside the US.",
+    "commons_file": "Gilbert Hill.jpg"
+  },
+  {
+    "slug": "mahakali-caves",
+    "name": "Mahakali Caves",
+    "latitude": 19.130436,
+    "longitude": 72.874133,
+    "best_time": "Midday",
+    "description": "Rock-cut Buddhist caves from the 1st century BCE, incongruously wedged behind an Andheri East IT park.",
+    "commons_file": "Mahakali caves.jpg"
+  },
+  {
+    "slug": "aksa-beach",
+    "name": "Aksa Beach",
+    "latitude": 19.1853321,
+    "longitude": 72.7963489,
+    "best_time": "Early morning",
+    "description": "A long, quieter stretch of sand out in Malad, backed by palms, with the Madh Fort headland visible up the coast.",
+    "commons_file": "Aksa Beach afternoon.jpg"
+  },
+  {
+    "slug": "versova-beach",
+    "name": "Versova Beach",
+    "latitude": 19.1300123,
+    "longitude": 72.8133251,
+    "best_time": "Early morning",
+    "description": "Fishing-village beach with a working Koli harbour at one end - come early to catch the boats going out.",
+    "commons_file": "Versova beach.JPG"
+  },
+  {
+    "slug": "marve-beach",
+    "name": "Marvé Beach",
+    "latitude": 19.1973,
+    "longitude": 72.7968,
+    "best_time": "Early morning",
+    "description": "Quiet creek-side beach facing Manori across the water, with the passenger ferry jetty at one end.",
+    "commons_file": "Marve-creek.jpg"
+  },
+  {
+    "slug": "manori",
+    "name": "Manori",
+    "latitude": 19.2067919,
+    "longitude": 72.7850095,
+    "best_time": "Early morning",
+    "description": "A coastal village reached by a short ferry ride, with palm groves and a working fishing harbour untouched by the city rush.",
+    "commons_file": "Manori-01.jpg"
+  },
+  {
+    "slug": "powai-lake",
+    "name": "Powai Lake",
+    "latitude": 19.1277203,
+    "longitude": 72.9062142,
+    "best_time": "Early morning",
+    "description": "Artificial lake ringed by high-rises, with the forested hills of Sanjay Gandhi National Park behind it.",
+    "commons_file": "Powai lake as seen from Ambedkar Garden, mumbai.jpg"
+  },
+  {
+    "slug": "hiranandani-gardens",
+    "name": "Hiranandani Gardens",
+    "latitude": 19.1183882,
+    "longitude": 72.911464,
+    "best_time": "Morning",
+    "description": "A Mediterranean-styled planned township in Powai, built around a piazza and colonnaded facades.",
+    "commons_file": "Hiranandani Powai.jpg"
+  },
+  {
+    "slug": "bandra-talao",
+    "name": "Bandra Talao",
+    "latitude": 19.056744,
+    "longitude": 72.8377699,
+    "best_time": "Morning",
+    "description": "A small lake and garden tucked into a residential Bandra lane, easy to walk past without noticing.",
+    "commons_file": "Bandra talao1.JPG"
+  },
+  {
+    "slug": "sewri-fort",
+    "name": "Sewri Fort",
+    "latitude": 19.000532,
+    "longitude": 72.8601744,
+    "best_time": "Morning",
+    "description": "17th-century fort overlooking the Sewri mudflats, famous every winter for the flamingos that gather just offshore.",
+    "commons_file": "Sewri Fort Inside 12.jpg"
+  },
+  {
+    "slug": "sion-hillock-fort",
+    "name": "Sion Hillock Fort",
+    "latitude": 19.0467,
+    "longitude": 72.8677,
+    "best_time": "Morning",
+    "description": "A small hilltop fort with an open view across Sion and the Dharavi rooftops below.",
+    "commons_file": "Sion Fort, Mumbai.png"
+  },
+  {
+    "slug": "belapur-fort",
+    "name": "Belapur Fort",
+    "latitude": 19.0051696,
+    "longitude": 73.0282853,
+    "best_time": "Morning",
+    "description": "Maratha-era fort ruins on a rise above Thane Creek, on the quieter Navi Mumbai side of the harbour.",
+    "commons_file": "Belapur fort 1.jpg"
+  },
+  {
+    "slug": "central-park-kharghar",
+    "name": "Central Park, Kharghar",
+    "latitude": 19.0580923,
+    "longitude": 73.0677822,
+    "best_time": "Early morning",
+    "description": "A large landscaped park with a musical fountain and open lawns, one of Navi Mumbai's biggest green spaces.",
+    "commons_file": "Central Park Fountain.jpg"
+  },
+  {
+    "slug": "kharghar",
+    "name": "Kharghar",
+    "latitude": 19.0361663,
+    "longitude": 73.0617276,
+    "best_time": "Night",
+    "description": "A planned Navi Mumbai node known for its wide avenues and hillside views, centred around Utsav Chowk.",
+    "commons_file": "Utsav Chowk.jpg"
+  },
+  {
+    "slug": "palm-beach-road",
+    "name": "Palm Beach Road",
+    "latitude": 19.0496,
+    "longitude": 73.0085,
+    "best_time": "Evening",
+    "description": "A waterfront boulevard tracing Thane Creek between Vashi and Belapur, good for the skyline across the water at dusk.",
+    "commons_file": "Buildings along the Palm Beach Road.JPG"
+  },
+  {
+    "slug": "dy-patil-stadium",
+    "name": "DY Patil Stadium",
+    "latitude": 19.0435531,
+    "longitude": 73.0278494,
+    "best_time": "Midday",
+    "description": "A large modern cricket and football stadium in Nerul, its tiered stands visible from well outside the ground.",
+    "commons_file": "D Y Patil Sports Stadium.jpg"
+  },
+  {
+    "slug": "navi-mumbai-skyline",
+    "name": "Navi Mumbai Skyline",
+    "latitude": 19.0637159,
+    "longitude": 73.0002509,
+    "best_time": "Evening",
+    "description": "High-rise skyline view from Vashi, Navi Mumbai's original planned node, across the water from the mainland.",
+    "commons_file": "Vashi Skyline.jpg"
   }
 ]
