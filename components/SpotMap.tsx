@@ -2,8 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+// Structural/animation rules only (the spiderfy transition) - deliberately not
+// MarkerCluster.Default.css, whose yellow/orange circles don't match the
+// palette. clusterIcon() below builds cluster badges the same way pin() and
+// locateIcon() already build spot/draft/location markers.
+import "leaflet.markercluster/dist/MarkerCluster.css";
 import { photoThumbUrl } from "@/lib/supabase/client";
 import { DEFAULT_ZOOM, MUMBAI_CENTER, type Spot } from "@/lib/types";
 
@@ -87,6 +93,23 @@ function locateIcon(color: string) {
     iconSize: [18, 18],
     iconAnchor: [9, 9],
     popupAnchor: [0, -9],
+  });
+}
+
+/**
+ * A round terracotta badge with the child count, same divIcon approach as
+ * pin()/locateIcon() above rather than leaflet.markercluster's default
+ * yellow circles (MarkerCluster.Default.css is deliberately not imported).
+ * Sized in three tiers so a 40-pin cluster reads as visibly bigger than a
+ * 3-pin one, not just a different number in the same-size circle.
+ */
+function clusterIcon(cluster: L.MarkerCluster) {
+  const count = cluster.getChildCount();
+  const size = count < 10 ? 34 : count < 25 ? 42 : 50;
+  return L.divIcon({
+    className: "",
+    html: `<span class="spot-cluster" style="--size:${size}px">${count}</span>`,
+    iconSize: [size, size],
   });
 }
 
@@ -176,7 +199,13 @@ export default function SpotMap({
       className={`h-full w-full ${pickingLocation ? "cursor-crosshair" : ""}`}
     >
       <ResilientTileLayer />
-      {markers}
+      <MarkerClusterGroup
+        iconCreateFunction={clusterIcon}
+        showCoverageOnHover={false}
+        maxClusterRadius={50}
+      >
+        {markers}
+      </MarkerClusterGroup>
       {draftPin && <Marker position={draftPin} icon={draftIcon} />}
       {userCoords && (
         <Marker position={userCoords} icon={userIcon} alt="Your location" title="You are here" />

@@ -305,15 +305,26 @@ layout shift for `width`/`height` attributes to prevent; the box holds its size 
 the image ever loads. Correcting the original rating rather than adding a no-op
 `width`/`height` pair just to check the box.
 
-### 11. Marker clustering ⚠️ now due
+### 11. Marker clustering ✅ done
 Still unnecessary at 22 spots. Add `react-leaflet-cluster` when user-added spots push the
 count toward ~100, when overlapping pins in the Fort/Colaba area start hiding each other.
 
-> **2026-09-24:** the second trigger has been hit before the first. At 44 spots, the
+> **2026-09-24:** the second trigger was hit before the first. At 44 spots, the
 > Fort/Colaba/Kala Ghoda group (CSMT, Flora Fountain, Horniman Circle, Rajabai, CSMVS,
-> Knesset Eliyahoo, St. Thomas Cathedral, Gateway) stacks into one overlapping blob at
-> the default zoom, and you can't click individual pins without zooming in first. Worth
-> doing now.
+> Knesset Eliyahoo, St. Thomas Cathedral, Gateway) stacked into one overlapping blob at
+> the default zoom, and you couldn't click individual pins without zooming in first.
+
+**Done:** `react-leaflet-cluster` + `leaflet.markercluster` (peer deps confirmed against
+React 19/react-leaflet 5 before installing). `clusterIcon()` in `SpotMap.tsx` builds
+cluster badges the same divIcon way `pin()`/`locateIcon()` already build the other
+markers - a round terracotta badge with the child count, three size tiers by count
+(<10/<25/25+) - rather than pulling in `MarkerCluster.Default.css`'s yellow circles,
+which don't match the palette. Only `MarkerCluster.css` (the spiderfy animation rules,
+no colors) is imported. The draft pin and "you are here" marker stay outside the
+`MarkerClusterGroup` so they're never absorbed into a cluster. Verified live: clicking a
+cluster zooms and cascades through the hierarchy correctly, individual-pin popups still
+work once zoomed in, no conflicts with dark mode (cluster badges are a fixed brand color
+like the other map markers, not theme-reactive - consistent with those).
 
 ---
 

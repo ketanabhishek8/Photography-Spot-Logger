@@ -114,6 +114,25 @@ body {
   50%      { transform: rotate(-45deg) scale(1.18); }
 }
 
+/* Cluster badge - a plain circle (like .you-are-here) rather than the
+   teardrop .spot-pin shape, since it isn't a single spot. --size is set
+   per-cluster by clusterIcon() in SpotMap.tsx (three tiers by child count). */
+.spot-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size, 34px);
+  height: var(--size, 34px);
+  border-radius: 50%;
+  background: #c1502e;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* "You are here" marker - deliberately a plain circle + halo rather than the
    teardrop .spot-pin shape above, so it can never be mistaken for a spot or
    the draft pin even at a glance. */
