@@ -11,29 +11,15 @@ from memory. Re-checked against the code **and the live database** on 2026-09-24
 Ranked by how much each one matters. Everything here was checked by running
 something today, not taken from earlier notes in this file.
 
-1. **The P0 #1 security hole is still open on the live database.**
-   `npx vitest run tests/security.test.ts` still fails on `a direct anon insert is
-   rejected`: a plain `POST` to `/rest/v1/spots` with the public anon key succeeds.
-   The code side landed on 2026-09-23 and this file marked it done, but the SQL never ran
-   against the live project. Anyone can still insert rows directly, including
-   `is_seed = true` rows that the app can never delete. The `CHECK` constraints from #3
-   aren't live either. **This is the most important open item in the file.** Fix it by
-   running only this in the Supabase SQL editor. Don't re-run the whole `schema.sql`,
-   which also rebuilds `geog` (see #8):
-   ```sql
-   drop policy if exists "public insert" on spots;
-   revoke insert, update, delete on spots from anon, authenticated;
-   alter table spots add constraint spots_name_length
-     check (char_length(name) <= 120) not valid;
-   alter table spots add constraint spots_description_length
-     check (description is null or char_length(description) <= 600) not valid;
-   alter table spots add constraint spots_best_time_length
-     check (best_time is null or char_length(best_time) <= 60) not valid;
-   ```
-   Then re-run `npx vitest run tests/security.test.ts`. It should pass 4/4.
+1. **The P0 #1 security hole is still open on the live database.** ✅ **fixed
+   2026-09-24** - migration applied in the Supabase SQL editor. Re-verified:
+   `npx vitest run tests/security.test.ts` now passes 4/4, and the `CHECK` constraints
+   confirmed live directly (a 130-char name via a raw REST insert with the service-role
+   key got rejected with `23514 spots_name_length`, not a 200).
 2. **CI is green but can't see #1.** Every DB-backed test skips in CI because the repo
    has no Supabase secrets, so a green check says nothing about the database. See #5.
-3. **The tests write to the production table.** See new item #19.
+   Still open - repo secrets aren't added yet.
+3. **The tests write to the production table.** See new item #19. Still open.
 4. **Leftover worktree files leak into local lint and test runs.** Today `npm test`
    reported 12 failing suites from `zod` and `tsconfig-paths` internals under
    `.claude/worktrees/…/node_modules`. See new item #20. ✅ **fixed same day** -
@@ -46,16 +32,16 @@ something today, not taken from earlier notes in this file.
 7. **The docs are out of date.** The README still says 22 spots and doesn't mention dark
    mode. See #18. Still open.
 
-Items 1-3 are still open and need your action (the SQL migration, then repo secrets,
-then a separate test project) - everything else checked today (4-6) is now fixed.
+Item 1 is fixed as of 2026-09-24. Items 2 and 3 are still open (repo secrets, then a
+separate test project) - everything else checked in this pass (1, 4-6) is now fixed.
 
 ---
 
 ## P0 — Security holes
 
-### 1. Close the direct anon insert path ⚠️ code done, NOT applied to the live database
-> **2026-09-24:** still open in production. The security test fails against the live
-> project. The exact SQL to run is in the Re-review section at the top.
+### 1. Close the direct anon insert path ✅ done, including the live database
+> **2026-09-24:** migration applied in the Supabase SQL editor. Re-verified:
+> `npx vitest run tests/security.test.ts` passes 4/4 against the live project.
 
 **Problem.** `supabase/schema.sql` still has the `public insert` RLS policy and
 `grant insert on spots to anon, authenticated`. The anon key ships in the JS bundle, so
@@ -77,9 +63,8 @@ Update `schema.sql` to match and remove the "public insert" line from its commen
 
 **Done:** dropped the `"public insert"` policy, added
 `revoke insert, update, delete on spots from anon, authenticated` (revoke, not just
-removing the old grant line, since GRANT is additive across re-runs). Needs the updated
-`schema.sql` re-run in the Supabase SQL editor to take effect on the live project - see
-below.
+removing the old grant line, since GRANT is additive across re-runs). Applied to the
+live project on 2026-09-24.
 
 ### 2. Mark the ownership cookie `secure` ✅ done
 **Problem.** `pit_owner_token` is set with `httpOnly` and `sameSite: "lax"` but no
@@ -96,10 +81,10 @@ the cookie options into one shared constant so the two copies can't drift apart.
 `secure: process.env.NODE_ENV === "production"`), used by both `cookies.set` call
 sites so they can't drift apart.
 
-### 3. Enforce length limits on the server ✅ done (API) / ⚠️ DB constraints not live
-> **2026-09-24:** the API checks are live. The `CHECK` constraints only matter for writes
-> that bypass the API, and #1 being open is exactly how those happen, so apply both
-> together.
+### 3. Enforce length limits on the server ✅ done, including the DB constraints
+> **2026-09-24:** the `CHECK` constraints are live. Confirmed directly: a 130-char name
+> sent straight to the REST API with the service-role key got rejected with
+> `23514 spots_name_length`, not a 200.
 
 **Problem.** `name` (120) and `description` (600) are capped only by `maxLength` on the
 form inputs. Neither `POST /api/spots` nor `PATCH /api/spots/[id]` checks length.
@@ -411,10 +396,7 @@ checklist of done / not planned / next.
 
 ---
 
-## Quick wins (2026-09-23): code done, database half still pending
-
-> **2026-09-24:** the heading used to say "✅ all done". The code is done, but the
-> database half of #1 and #3 is still pending. See the Re-review section at the top.
+## Quick wins ✅ all done (2026-09-23, database half applied 2026-09-24)
 
 These were done in one sitting and fix the most important problems:
 
@@ -426,7 +408,7 @@ These were done in one sitting and fix the most important problems:
 | 6 | Throw on read errors instead of showing "0 spots" | ~5 lines |
 | 14 | Keep unknown `best_time` values in the edit form | ~5 lines |
 
-Items 1 and 3's database half (the revoke and the `CHECK` constraints) need
-`supabase/schema.sql` re-run in the Supabase SQL editor to take effect on the live
-project - the app code is deployed, but the database side is a manual step, same as
-every other schema change this project has made.
+Items 1 and 3's database half (the revoke and the `CHECK` constraints) sat unapplied
+against the live project for a full day after the app code shipped - caught by
+re-running the security test suite against production on 2026-09-24, not by anything
+that would have flagged it on its own. Applied the same day.
