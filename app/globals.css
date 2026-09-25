@@ -190,6 +190,7 @@ body {
   color: var(--color-muted);
 }
 .leaflet-container .leaflet-control-attribution a { color: var(--color-accent-text); }
+.mini-map .leaflet-control-attribution.leaflet-control { font-size: 9px; line-height: 1.4; }
 
 /* Dark-mode fallback for providers with no dark style configured
    (NEXT_PUBLIC_TILE_URL_DARK unset, or after SpotMap's OSM fallback kicked
