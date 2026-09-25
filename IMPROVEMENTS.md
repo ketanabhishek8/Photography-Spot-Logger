@@ -331,7 +331,9 @@ forms already do.
 gets focus when it opens and Esc cancels. A failed delete shows a dismissible banner
 above the list. Verified end to end by creating a throwaway spot through the API,
 opening the prompt, cancelling with Esc, then confirming the delete; the live row count
-went back to 44.
+went back to 44. Clicking a different row's fly-to button also cancels an open prompt
+(added the same day, once noticed missing) - verified by opening a confirm on one spot,
+clicking another, and checking it closed without deleting anything.
 
 ### 13. Adjustable "Near me" radius ✅ done
 `RADIUS_M` is hard-coded to 5000 in `MapExperience.tsx`. The original plan had a radius
@@ -391,12 +393,22 @@ theme too. The theme store moved to `lib/useTheme.ts`, so the toggle and both ma
 one source. **Needs `NEXT_PUBLIC_TILE_URL_DARK` in the Vercel env vars**; production
 uses the CSS fallback until then.
 
-### 23. The mobile sidebar header can squeeze out the list *(new, 2026-09-25)*
+### 23. The mobile sidebar header can squeeze out the list ✅ done
 On phones the sidebar is `h-[45vh]`, and the header (title, view toggle, Log a spot /
 Near me, radius, search, tag chips) is about 260px tall. On a short screen (390px tall)
 that's the whole panel, and the spot list gets no space at all. On a typical 812px
 phone it gets about 100px. Options: collapse the radius control into Near me, move
 search and tags into a sheet, or let the whole panel scroll rather than just the list.
+
+**Done (2026-09-25):** took the last option below `lg` - the whole panel scrolls as one
+unit, with the header `sticky top-0` so it stays visible while the list scrolls under
+it, instead of the header (non-scrolling) and the list (`flex-1 overflow-y-auto`)
+fighting over a fixed 45vh. Also hid the radius control until "Near me" is actually
+active, since it controls a request that hasn't been made yet - one less row by
+default. At `lg` nothing changed: plenty of height there, so the header stays fixed and
+only the list scrolls, as before. Verified at 400px and 600px tall viewports: the last
+row in the list is reachable by scrolling the panel, and radius reappears once a
+(stubbed) geolocation call actually succeeds.
 
 ### 24. New features added 2026-09-25 (record, not to-do)
 - **Pins coloured by light.** `lib/light.ts` groups the dozen free-text `best_time`
