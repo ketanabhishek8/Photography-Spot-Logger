@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AddSpotForm from "@/components/AddSpotForm";
 import EditSpotForm from "@/components/EditSpotForm";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -43,6 +43,11 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   const [view, setView] = useState<"list" | "gallery">("list");
   const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Inline "Delete? Cancel / Delete" state, replacing window.confirm/alert -
+  // the native dialogs looked out of place next to the rest of the UI and
+  // can't be themed for dark mode.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Which spots this browser logged and can therefore edit/delete - computed
   // server-side (app/page.tsx) from the pit_owner_token cookie, since only
@@ -51,7 +56,8 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   const editing = adding || editingSpot !== null;
 
   async function handleDelete(spot: Spot) {
-    if (!window.confirm(`Delete "${spot.name}"? This can't be undone.`)) return;
+    setConfirmingId(null);
+    setDeleteError(null);
     setDeletingId(spot.id);
     try {
       const res = await fetch(`/api/spots/${spot.id}`, { method: "DELETE" });
@@ -61,10 +67,29 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
       }
       router.refresh();
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Something went wrong.");
+      setDeleteError(
+        `Couldn't delete "${spot.name}": ${err instanceof Error ? err.message : "something went wrong."}`,
+      );
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function ownerControls(spot: Spot, overlay = false) {
+    return (
+      <SpotOwnerControls
+        overlay={overlay}
+        deleting={deletingId === spot.id}
+        confirming={confirmingId === spot.id}
+        onEdit={() => {
+          setConfirmingId(null);
+          setEditingSpot(spot);
+        }}
+        onDelete={() => setConfirmingId(spot.id)}
+        onConfirm={() => handleDelete(spot)}
+        onCancel={() => setConfirmingId(null)}
+      />
+    );
   }
 
   const visible = useMemo(() => {
@@ -284,6 +309,22 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {deleteError && !editing && (
+            <div
+              role="alert"
+              className="mx-3 mt-3 flex items-start gap-2 rounded-xl bg-danger-soft px-3 py-2 text-xs text-danger"
+            >
+              <span className="flex-1">{deleteError}</span>
+              <button
+                type="button"
+                onClick={() => setDeleteError(null)}
+                aria-label="Dismiss"
+                className="shrink-0 font-medium underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
           {adding ? (
             <div className="p-5">
               {picking && !draftPin && (
@@ -363,13 +404,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                         )}
                       </span>
                     </button>
-                    {mine && (
-                      <SpotOwnerControls
-                        deleting={deletingId === spot.id}
-                        onEdit={() => setEditingSpot(spot)}
-                        onDelete={() => handleDelete(spot)}
-                      />
-                    )}
+                    {mine && ownerControls(spot)}
                   </li>
                 );
               })}
@@ -404,14 +439,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                       )}
                     </button>
                     {mine && (
-                      <div className="absolute right-1 top-1">
-                        <SpotOwnerControls
-                          deleting={deletingId === spot.id}
-                          onEdit={() => setEditingSpot(spot)}
-                          onDelete={() => handleDelete(spot)}
-                          overlay
-                        />
-                      </div>
+                      <div className="absolute right-1 top-1">{ownerControls(spot, true)}</div>
                     )}
                   </div>
                 );
@@ -439,21 +467,75 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   );
 }
 
-/** Small edit/delete icon pair shown only on spots this browser owns. */
+/**
+ * Small edit/delete icon pair shown only on spots this browser owns. Delete
+ * is two-step: the trash icon swaps the pair for an inline "Delete? Cancel /
+ * Delete" prompt instead of a native window.confirm.
+ */
 function SpotOwnerControls({
   deleting,
+  confirming,
   onEdit,
   onDelete,
+  onConfirm,
+  onCancel,
   overlay = false,
 }: {
   deleting: boolean;
+  confirming: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
   overlay?: boolean;
 }) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  // Focus Cancel (the safe choice) when the prompt opens, so keyboard users
+  // land on it and a stray Enter doesn't delete anything.
+  useEffect(() => {
+    if (confirming) cancelRef.current?.focus();
+  }, [confirming]);
+
   const btn = overlay
     ? "rounded-md bg-paper/90 p-1 text-muted shadow-sm backdrop-blur transition hover:text-ink disabled:opacity-50"
     : "shrink-0 rounded-md p-1.5 text-muted transition hover:bg-accent-soft hover:text-ink disabled:opacity-50";
+
+  if (confirming || deleting) {
+    return (
+      <div
+        role="group"
+        aria-label="Confirm delete"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onCancel();
+        }}
+        className={`flex shrink-0 items-center gap-1 text-xs ${
+          overlay ? "rounded-lg bg-paper/95 p-1 shadow-sm backdrop-blur" : "pr-1"
+        }`}
+      >
+        <span className="px-1 font-medium text-ink">{deleting ? "Deleting..." : "Delete?"}</span>
+        {!deleting && (
+          <>
+            <button
+              ref={cancelRef}
+              type="button"
+              onClick={onCancel}
+              className="rounded-md px-2 py-1 text-muted transition hover:bg-accent-soft hover:text-ink"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="rounded-md bg-danger px-2 py-1 font-medium text-paper transition hover:opacity-90"
+            >
+              Delete
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex shrink-0 gap-1">
