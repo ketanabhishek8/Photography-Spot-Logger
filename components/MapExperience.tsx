@@ -79,6 +79,12 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
     }
   }
 
+  /** Clicking any row cancels a pending delete confirm elsewhere in the list. */
+  function flyTo(spot: Spot) {
+    if (confirmingId) setConfirmingId(null);
+    setFlyTarget([spot.latitude, spot.longitude]);
+  }
+
   function ownerControls(spot: Spot, overlay = false) {
     return (
       <SpotOwnerControls
@@ -216,8 +222,17 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   return (
     <div className="flex h-full flex-col lg:flex-row">
       {/* ------------------------------------------------------------- panel */}
-      <aside className="flex h-[45vh] w-full shrink-0 flex-col border-b border-line bg-paper lg:h-full lg:w-88 lg:border-b-0 lg:border-r">
-        <header className="border-b border-line px-5 py-4">
+      {/* On mobile the panel is a fixed 45vh, and the header (title, view
+          toggle, actions, search, tag chips) can be taller than that on a
+          short screen - h-[45vh] plus a flex-1 list below it would then
+          squeeze the list to zero height, or clip the header outright,
+          rather than showing everything (IMPROVEMENTS.md #23). Below `lg`
+          the whole aside scrolls as one unit instead, with the header
+          sticky at the top, so the list is always reachable by scrolling
+          even on a very short screen. At `lg` there's room to spare, so the
+          header stays fixed and only the list scrolls, as before. */}
+      <aside className="flex h-[45vh] w-full shrink-0 flex-col overflow-y-auto border-b border-line bg-paper lg:h-full lg:overflow-visible lg:w-88 lg:border-b-0 lg:border-r">
+        <header className="sticky top-0 z-10 border-b border-line bg-paper px-5 py-4 lg:static">
           <div className="flex items-start justify-between gap-2">
             <h1 className="font-display text-xl font-semibold tracking-tight text-ink">
               Mumbai Photo Spots
@@ -295,7 +310,10 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
 
           {nearbyNote && <p className="mt-2 text-xs text-muted">{nearbyNote}</p>}
 
-          {!editing && (
+          {/* Only shown once "Near me" is active - before that, radius controls
+              a request that hasn't been made yet, and hiding it saves a whole
+              row of the (already tight) mobile panel height. */}
+          {!editing && nearbyIds && (
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs text-muted">Radius</span>
               <div className="flex overflow-hidden rounded-md border border-line">
@@ -357,7 +375,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
           )}
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
           {deleteError && !editing && (
             <div
               role="alert"
@@ -435,7 +453,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                 return (
                   <li key={spot.id} className="flex items-center gap-1 px-2 transition hover:bg-accent-soft/40">
                     <button
-                      onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
+                      onClick={() => flyTo(spot)}
                       className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -469,7 +487,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                 return (
                   <div key={spot.id} className="group relative">
                     <button
-                      onClick={() => setFlyTarget([spot.latitude, spot.longitude])}
+                      onClick={() => flyTo(spot)}
                       className="w-full text-left"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
