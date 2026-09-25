@@ -7,6 +7,7 @@ import AddSpotForm from "@/components/AddSpotForm";
 import EditSpotForm from "@/components/EditSpotForm";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getSupabase, photoThumbUrl } from "@/lib/supabase/client";
+import { LIGHT_BUCKETS, lightBucket, type LightBucket } from "@/lib/light";
 import type { Spot } from "@/lib/types";
 
 /**
@@ -39,7 +40,8 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   // rather than asking the browser for permission/a GPS lock all over again.
   const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
   const [search, setSearch] = useState("");
-  const [bestTimeFilter, setBestTimeFilter] = useState("");
+  // Empty means "all" - otherwise only spots in the chosen light buckets.
+  const [lightFilter, setLightFilter] = useState<LightBucket[]>([]);
   const [view, setView] = useState<"list" | "gallery">("list");
   const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -92,10 +94,10 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
     );
   }
 
-  const visible = useMemo(() => {
+  // Nearby + search, before the light filter - kept separate so the legend
+  // can show how many spots each bucket would add back if toggled on.
+  const baseVisible = useMemo(() => {
     let list = nearbyIds ? spots.filter((s) => nearbyIds.includes(s.id)) : spots;
-
-    if (bestTimeFilter) list = list.filter((s) => s.best_time === bestTimeFilter);
 
     const q = search.trim().toLowerCase();
     if (q) {
@@ -105,19 +107,35 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
     }
 
     return list;
-  }, [spots, nearbyIds, search, bestTimeFilter]);
+  }, [spots, nearbyIds, search]);
 
-  const filtering = search.trim() !== "" || bestTimeFilter !== "";
-
-  // Derived from the actual data rather than the add-form's curated preset
-  // list (lib/types.ts BEST_TIME_OPTIONS) - the seeded spots use values like
-  // "Sunset" and "Early morning" that aren't in that shorter list, and the
-  // filter needs to be able to reach everything that's actually there.
-  const availableBestTimes = useMemo(
+  const visible = useMemo(
     () =>
-      Array.from(new Set(spots.map((s) => s.best_time).filter((t): t is string => Boolean(t)))).sort(),
-    [spots],
+      lightFilter.length === 0
+        ? baseVisible
+        : baseVisible.filter((s) => {
+            const bucket = lightBucket(s.best_time);
+            return bucket !== null && lightFilter.includes(bucket);
+          }),
+    [baseVisible, lightFilter],
   );
+
+  const bucketCounts = useMemo(() => {
+    const counts = new Map<LightBucket, number>();
+    for (const s of baseVisible) {
+      const bucket = lightBucket(s.best_time);
+      if (bucket) counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+    }
+    return counts;
+  }, [baseVisible]);
+
+  const filtering = search.trim() !== "" || lightFilter.length > 0;
+
+  function toggleLight(bucket: LightBucket) {
+    setLightFilter((current) =>
+      current.includes(bucket) ? current.filter((b) => b !== bucket) : [...current, bucket],
+    );
+  }
 
   function startAdding() {
     setAdding(true);
@@ -282,29 +300,14 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
           )}
 
           {!editing && (
-            <div className="mt-3 flex gap-2">
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search spots..."
-                className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-1.5 text-sm text-ink
-                           outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
-              />
-              <select
-                value={bestTimeFilter}
-                onChange={(e) => setBestTimeFilter(e.target.value)}
-                className="rounded-xl border border-line bg-paper px-2 py-1.5 text-sm text-ink
-                           outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
-              >
-                <option value="">Any time</option>
-                {availableBestTimes.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search spots..."
+              className="mt-3 w-full rounded-xl border border-line bg-paper px-3 py-1.5 text-sm text-ink
+                         outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
+            />
           )}
         </header>
 
@@ -367,7 +370,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                   <button
                     onClick={() => {
                       setSearch("");
-                      setBestTimeFilter("");
+                      setLightFilter([]);
                     }}
                     className="text-accent-text underline"
                   >
@@ -450,7 +453,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
       </aside>
 
       {/* --------------------------------------------------------------- map */}
-      <div className="h-[60vh] min-h-0 flex-1 lg:h-full">
+      <div className="relative h-[60vh] min-h-0 flex-1 lg:h-full">
         <SpotMap
           spots={visible}
           draftPin={draftPin}
@@ -462,7 +465,66 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
             setPicking(false);
           }}
         />
+        {!editing && (
+          <LightLegend active={lightFilter} counts={bucketCounts} onToggle={toggleLight} />
+        )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Map legend for the pin colours, doubling as the light filter: each row is a
+ * toggle. Nothing selected shows every spot; selecting rows narrows to just
+ * those buckets. Replaces the old best-time dropdown, whose dozen
+ * inconsistent free-text values ("Mid morning", "Late morning"...) made it
+ * hard to use.
+ */
+function LightLegend({
+  active,
+  counts,
+  onToggle,
+}: {
+  active: LightBucket[];
+  counts: Map<LightBucket, number>;
+  onToggle: (bucket: LightBucket) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Filter by light"
+      // A single wrapping row on small screens, where the map is only ~half
+      // the viewport and a full card would cover a third of it; the labelled
+      // vertical card from lg up.
+      className="absolute bottom-3 left-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-wrap gap-0.5 rounded-xl border border-line bg-paper/90 p-1 shadow-md backdrop-blur lg:flex-col lg:flex-nowrap lg:gap-0 lg:p-1.5"
+    >
+      <p className="hidden px-1.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted lg:block">
+        Best light
+      </p>
+      {LIGHT_BUCKETS.map((b) => {
+        const on = active.includes(b.id);
+        const dimmed = active.length > 0 && !on;
+        return (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => onToggle(b.id)}
+            aria-pressed={on}
+            className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition lg:w-full lg:gap-2 ${
+              on ? "bg-accent-soft text-ink" : "text-ink hover:bg-accent-soft/60"
+            } ${dimmed ? "opacity-50" : ""}`}
+          >
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/80"
+              style={{ background: b.color }}
+            />
+            <span className="lg:hidden">{b.short}</span>
+            <span className="hidden flex-1 lg:inline">{b.label}</span>
+            <span className="tabular-nums text-muted">{counts.get(b.id) ?? 0}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

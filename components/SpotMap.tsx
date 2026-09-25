@@ -12,6 +12,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import { photoThumbUrl } from "@/lib/supabase/client";
 import { DEFAULT_ZOOM, MUMBAI_CENTER, type Spot } from "@/lib/types";
+import { LIGHT_BUCKETS, lightBucket, lightColor } from "@/lib/light";
 import { useTheme } from "@/lib/useTheme";
 
 const TILE_URL = process.env.NEXT_PUBLIC_TILE_URL || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -136,7 +137,11 @@ function clusterIcon(cluster: L.MarkerCluster) {
   });
 }
 
-const spotIcon = pin("#c1502e");
+// One cached icon per light bucket (plus the unbucketed fallback) rather
+// than a new divIcon per marker - 44+ markers share five icon objects.
+const spotIcons = new Map(
+  [...LIGHT_BUCKETS.map((b) => b.id), null].map((bucket) => [bucket, pin(lightColor(bucket))]),
+);
 const draftIcon = pin("#2563eb", true);
 const userIcon = locateIcon("#1d6f66");
 
@@ -182,7 +187,7 @@ export default function SpotMap({
         <Marker
           key={spot.id}
           position={[spot.latitude, spot.longitude]}
-          icon={spotIcon}
+          icon={spotIcons.get(lightBucket(spot.best_time))}
           alt={spot.name}
           title={spot.name}
         >
