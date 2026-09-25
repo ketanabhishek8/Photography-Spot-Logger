@@ -30,7 +30,8 @@ something today, not taken from earlier notes in this file.
 6. **Marker clustering (#11) is now due.** The trigger this file set for it has been
    reached. ✅ **fixed same day** - see #11.
 7. **The docs are out of date.** The README still says 22 spots and doesn't mention dark
-   mode. See #18. Still open.
+   mode. See #18. Still open, and more so now that tags, the light legend and the sky
+   forecast exist.
 
 Item 1 is fixed as of 2026-09-24. Items 2 and 3 are still open (repo secrets, then a
 separate test project) - everything else checked in this pass (1, 4-6) is now fixed.
@@ -320,10 +321,17 @@ like the other map markers, not theme-reactive - consistent with those).
 
 ## P3 — UX and polish
 
-### 12. Replace `window.confirm` / `window.alert`
+### 12. Replace `window.confirm` / `window.alert` ✅ done
 Delete uses the browser's built-in pop-ups (`MapExperience.tsx`, `handleDelete`). Use an
 inline confirm on the row ("Delete? Yes / No") and show errors inline, the same way the
 forms already do.
+
+**Done (2026-09-25):** the trash icon swaps the edit/delete pair for an inline
+"Delete? Cancel / Delete" prompt, in both the list row and the gallery overlay. Cancel
+gets focus when it opens and Esc cancels. A failed delete shows a dismissible banner
+above the list. Verified end to end by creating a throwaway spot through the API,
+opening the prompt, cancelling with Esc, then confirming the delete; the live row count
+went back to 44.
 
 ### 13. Adjustable "Near me" radius ✅ done
 `RADIUS_M` is hard-coded to 5000 in `MapExperience.tsx`. The original plan had a radius
@@ -373,6 +381,38 @@ look unfinished. MapTiler has dark raster styles. Pick the tile URL from the act
 subscription `ThemeToggle.tsx` uses, and the `TileLayer`'s `url` prop will pick up the
 change. Open an actual tile from the dark style before switching to it. A `200` alone
 doesn't prove the style name exists; it can come back as a placeholder image.
+
+**Done (2026-09-25):** `NEXT_PUBLIC_TILE_URL_DARK` points at MapTiler's `streets-v4-dark`,
+chosen after opening real land tiles over Parel. `dataviz-dark` was also checked and
+rejected because it drops place labels at street zoom. With no dark URL set, or once the
+OSM fallback has kicked in, dark mode inverts the light tiles with a CSS filter instead,
+so the map never stays bright. Leaflet's zoom buttons and attribution bar follow the
+theme too. The theme store moved to `lib/useTheme.ts`, so the toggle and both maps read
+one source. **Needs `NEXT_PUBLIC_TILE_URL_DARK` in the Vercel env vars**; production
+uses the CSS fallback until then.
+
+### 23. The mobile sidebar header can squeeze out the list *(new, 2026-09-25)*
+On phones the sidebar is `h-[45vh]`, and the header (title, view toggle, Log a spot /
+Near me, radius, search, tag chips) is about 260px tall. On a short screen (390px tall)
+that's the whole panel, and the spot list gets no space at all. On a typical 812px
+phone it gets about 100px. Options: collapse the radius control into Near me, move
+search and tags into a sheet, or let the whole panel scroll rather than just the list.
+
+### 24. New features added 2026-09-25 (record, not to-do)
+- **Pins coloured by light.** `lib/light.ts` groups the dozen free-text `best_time`
+  values into sunrise / daytime / golden & sunset / blue hour & night by keyword. Pins
+  take the bucket colour, each at least 3:1 against light tiles. A legend on the map
+  shows counts and doubles as the filter, replacing the best-time dropdown.
+- **Tags.** A fixed set of seven, stored as `tags text[]` with a `CHECK` constraint
+  mirroring `SPOT_TAGS`, validated by the shared `parseTags()` in both API routes.
+  Chips in the add/edit forms and a filter row in the sidebar. The live database was
+  migrated by hand on 2026-09-25 (column, constraint, grant, `spots_within_radius`,
+  tags for all 44 seeds); the anon read path, the RPC and the constraint were
+  re-verified afterwards.
+- **Spot page redesign.** Hero photo, Directions and Share buttons, a
+  non-interactive mini-map, and a sky forecast for the next sunrise and sunset from
+  Open-Meteo. The forecast is cached in memory, because `force-dynamic` makes every
+  fetch on the page no-store in this Next version.
 
 ### 17. Edit photo and location
 Editing currently covers name, description and best time only. Letting people replace
