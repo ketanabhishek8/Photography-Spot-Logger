@@ -12,11 +12,18 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import { photoThumbUrl } from "@/lib/supabase/client";
 import { DEFAULT_ZOOM, MUMBAI_CENTER, type Spot } from "@/lib/types";
+import { useTheme } from "@/lib/useTheme";
 
 const TILE_URL = process.env.NEXT_PUBLIC_TILE_URL || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const TILE_ATTRIBUTION =
   process.env.NEXT_PUBLIC_TILE_ATTRIBUTION ||
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// Optional dark-theme variant of TILE_URL (e.g. MapTiler's streets-v4-dark
+// style - same URL with the style name swapped, see .env.example). When it's
+// unset, dark mode falls back to inverting the light tiles with a CSS filter
+// (.map-tiles-filtered in globals.css) rather than leaving a bright map
+// under a dark UI.
+const TILE_URL_DARK = process.env.NEXT_PUBLIC_TILE_URL_DARK || "";
 
 // Keyless fallback so a broken tile provider (an expired/misconfigured
 // MapTiler key, a quota run out) degrades to a working map instead of
@@ -31,11 +38,27 @@ const FALLBACK_TILE_ATTRIBUTION =
 // failure of the configured provider should.
 const TILE_ERROR_THRESHOLD = 6;
 
-/** Falls back to keyless OpenStreetMap tiles after the primary provider
- * fails repeatedly, instead of leaving the map blank. */
+/**
+ * Falls back to keyless OpenStreetMap tiles after the primary provider
+ * fails repeatedly, instead of leaving the map blank, and follows the
+ * light/dark theme toggle - real dark tiles when TILE_URL_DARK is set,
+ * otherwise a CSS-inverted version of whatever light tiles are showing.
+ */
 function ResilientTileLayer() {
+  const theme = useTheme();
+  const map = useMap();
   const [useFallback, setUseFallback] = useState(false);
   const errorCount = useRef(0);
+
+  const dark = theme === "dark";
+  const primaryUrl = dark && TILE_URL_DARK ? TILE_URL_DARK : TILE_URL;
+  // Only filter tiles that aren't already dark, so real dark tiles never get
+  // inverted back to light.
+  const filtered = dark && (useFallback || !TILE_URL_DARK);
+
+  useEffect(() => {
+    map.getContainer().classList.toggle("map-tiles-filtered", filtered);
+  }, [map, filtered]);
 
   const eventHandlers = useMemo(
     () => ({
@@ -62,7 +85,7 @@ function ResilientTileLayer() {
       // _ATTRIBUTION (no code change needed to switch providers - see
       // .env.example for the verified URL format and setup notes).
       attribution={useFallback ? FALLBACK_TILE_ATTRIBUTION : TILE_ATTRIBUTION}
-      url={useFallback ? FALLBACK_TILE_URL : TILE_URL}
+      url={useFallback ? FALLBACK_TILE_URL : primaryUrl}
       maxZoom={19}
       detectRetina={!useFallback} // MapTiler's {r} URL token supports sharper high-DPI tiles; skip it on the OSM fallback to keep request volume down, per their usage policy above
       eventHandlers={eventHandlers}

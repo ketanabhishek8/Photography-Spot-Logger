@@ -178,7 +178,10 @@ upload/resize path, and "delete, then re-log it" already covers that.
   back to keyless OpenStreetMap tiles after a run of tile errors from whichever provider
   is configured, so a bad key degrades the map instead of leaving it blank; cloning the
   repo without a MapTiler key at all also just works, plainer. Whichever provider is
-  active, the URL is swappable with no code change.
+  active, the URL is swappable with no code change. Dark mode swaps to
+  `NEXT_PUBLIC_TILE_URL_DARK` (MapTiler's `streets-v4-dark`, same key) when it's set, and
+  otherwise inverts the light tiles with a CSS filter so the map never stays bright
+  under a dark UI.
 - **Uploads** are capped at 8 MB, then downscaled server-side to 1600px wide with `sharp`
   before being stored (EXIF-oriented first, so re-encoded photos don't come out sideways).
   The seed script runs the exact same pipeline on the Commons downloads, so the pre-loaded

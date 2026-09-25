@@ -173,5 +173,33 @@ body {
 .leaflet-popup-content { margin: 12px; }
 .leaflet-popup-tip { background: var(--color-paper); }
 
+/* Leaflet's zoom buttons and attribution bar are hardcoded white; route them
+   through the tokens so they follow the theme like everything else. */
+/* Prefixed with .leaflet-container to outrank leaflet.css, which is imported
+   by SpotMap after this file and would otherwise win on source order. */
+.leaflet-container { background: var(--color-line); }
+.leaflet-container .leaflet-bar a {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border-bottom-color: var(--color-line);
+}
+.leaflet-container .leaflet-bar a:hover { background: var(--color-accent-soft); }
+.leaflet-container .leaflet-bar { border-color: var(--color-line); }
+.leaflet-container .leaflet-control-attribution.leaflet-control {
+  background: color-mix(in srgb, var(--color-paper) 85%, transparent);
+  color: var(--color-muted);
+}
+.leaflet-container .leaflet-control-attribution a { color: var(--color-accent-text); }
+
+/* Dark-mode fallback for providers with no dark style configured
+   (NEXT_PUBLIC_TILE_URL_DARK unset, or after SpotMap's OSM fallback kicked
+   in): invert the light tiles, then rotate hue back so water stays blue and
+   parks stay green. SpotMap only adds .map-tiles-filtered in that case, so
+   real dark tiles are never double-inverted. Scoped to the tile pane, so
+   markers, popups and controls are untouched. */
+:root[data-theme="dark"] .map-tiles-filtered .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+}
+
 /* The app is a full-height map shell, so never let the page itself scroll. */
 html, body { overscroll-behavior: none; }
