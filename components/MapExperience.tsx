@@ -227,12 +227,15 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
           short screen - h-[45vh] plus a flex-1 list below it would then
           squeeze the list to zero height, or clip the header outright,
           rather than showing everything (IMPROVEMENTS.md #23). Below `lg`
-          the whole aside scrolls as one unit instead, with the header
-          sticky at the top, so the list is always reachable by scrolling
-          even on a very short screen. At `lg` there's room to spare, so the
-          header stays fixed and only the list scrolls, as before. */}
+          the whole aside scrolls as one unit instead, header included, so
+          the list is always reachable and gets the full panel height once
+          scrolled. The header is deliberately *not* sticky: it's ~215px,
+          taller than the whole panel on a landscape phone (45vh of 375px is
+          169px), and a sticky header that tall would cover the list
+          permanently - measured, not guessed. At `lg` there's room to spare,
+          so the header stays fixed and only the list scrolls, as before. */}
       <aside className="flex h-[45vh] w-full shrink-0 flex-col overflow-y-auto border-b border-line bg-paper lg:h-full lg:overflow-visible lg:w-88 lg:border-b-0 lg:border-r">
-        <header className="sticky top-0 z-10 border-b border-line bg-paper px-5 py-4 lg:static">
+        <header className="border-b border-line px-5 py-4">
           <div className="flex items-start justify-between gap-2">
             <h1 className="font-display text-xl font-semibold tracking-tight text-ink">
               Mumbai Photo Spots

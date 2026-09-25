@@ -401,14 +401,24 @@ phone it gets about 100px. Options: collapse the radius control into Near me, mo
 search and tags into a sheet, or let the whole panel scroll rather than just the list.
 
 **Done (2026-09-25):** took the last option below `lg` - the whole panel scrolls as one
-unit, with the header `sticky top-0` so it stays visible while the list scrolls under
-it, instead of the header (non-scrolling) and the list (`flex-1 overflow-y-auto`)
-fighting over a fixed 45vh. Also hid the radius control until "Near me" is actually
-active, since it controls a request that hasn't been made yet - one less row by
-default. At `lg` nothing changed: plenty of height there, so the header stays fixed and
-only the list scrolls, as before. Verified at 400px and 600px tall viewports: the last
-row in the list is reachable by scrolling the panel, and radius reappears once a
-(stubbed) geolocation call actually succeeds.
+unit, header included, instead of the header (non-scrolling) and the list
+(`flex-1 overflow-y-auto`) fighting over a fixed 45vh. Also hid the radius control until
+"Near me" is actually active, since it controls a request that hasn't been made yet -
+one less row by default. At `lg` nothing changed: the header stays fixed and only the
+list scrolls, as before.
+
+**First attempt was wrong.** It made the header `sticky`. That's no different from
+before when the header fits, and when it doesn't (215px header, 169px panel on a
+landscape phone), a sticky header covers the whole panel and the list can never be
+seen. The original check only asked whether the last row was *inside the window*, not
+whether it was *visible past the header*, so it passed anyway. Caught by re-verifying
+with `elementFromPoint` probes; the header is now plain static.
+
+Re-verified at 812×375 (landscape), 510×391, 320×568, 375×667 and 375×812. At every
+size, once the header is scrolled away the list fills the panel top to bottom, the last
+spot scrolls fully into view, and the tag chips are reachable without clipping. At
+1280×720 the panel itself doesn't scroll and the header stays put while the list
+scrolls.
 
 ### 24. New features added 2026-09-25 (record, not to-do)
 - **Pins coloured by light.** `lib/light.ts` groups the dozen free-text `best_time`
