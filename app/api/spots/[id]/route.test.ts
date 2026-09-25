@@ -72,6 +72,23 @@ describe("PATCH/DELETE /api/spots/[id] validation (no DB)", () => {
     expect(res.status).toBe(400);
   });
 
+  it("PATCH rejects an unknown tag", async () => {
+    const res = await PATCH(
+      req("PATCH", fakeId, { cookie: "any-token", body: { name: "ok", tags: ["volcano"] } }),
+      params(fakeId),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/unknown tag/i);
+  });
+
+  it("PATCH rejects tags that aren't a list", async () => {
+    const res = await PATCH(
+      req("PATCH", fakeId, { cookie: "any-token", body: { name: "ok", tags: "beach" } }),
+      params(fakeId),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("PATCH rejects malformed JSON", async () => {
     const badReq = new NextRequest(`http://localhost:3000/api/spots/${fakeId}`, {
       method: "PATCH",

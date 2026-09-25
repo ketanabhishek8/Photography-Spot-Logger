@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import TagPicker from "@/components/TagPicker";
 import { ALLOWED_MIME, BEST_TIME_OPTIONS, MAX_UPLOAD_BYTES } from "@/lib/types";
 
 type Props = {
@@ -129,6 +130,8 @@ export default function AddSpotForm({
           ))}
         </select>
       </div>
+
+      <TagPicker />
 
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">Photo</label>

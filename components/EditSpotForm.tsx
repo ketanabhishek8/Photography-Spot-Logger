@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import TagPicker from "@/components/TagPicker";
 import { BEST_TIME_OPTIONS, type Spot } from "@/lib/types";
 
 type Props = {
@@ -10,8 +11,8 @@ type Props = {
 };
 
 /**
- * Editing is deliberately narrower than creation: name, description and
- * best time only. The photo and pin location aren't editable here - both
+ * Editing is deliberately narrower than creation: name, description, best
+ * time and tags only. The photo and pin location aren't editable here - both
  * involve re-running the upload/sharp/orphan-cleanup path AddSpotForm
  * already does, and "delete, then re-log with the right photo/pin" covers
  * that without duplicating it.
@@ -34,6 +35,7 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
           name: data.get("name"),
           description: data.get("description"),
           best_time: data.get("best_time"),
+          tags: data.getAll("tags"),
         }),
       });
       const payload = await res.json();
@@ -81,8 +83,8 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
         <select name="best_time" className={field} defaultValue={spot.best_time ?? "Golden hour"}>
           {/*
             Seeded/logged spots can carry a best_time outside this curated
-            list (e.g. "Sunset", "Morning" - see MapExperience's
-            availableBestTimes, derived from live data for the same reason).
+            list (e.g. "Sunset", "Morning" - the seeded spots use a dozen
+            spellings, which lib/light.ts groups for the map legend).
             A <select> with no matching <option> silently falls back to
             showing (and submitting) the first option instead, which would
             quietly overwrite the real value the moment this form is saved -
@@ -96,6 +98,8 @@ export default function EditSpotForm({ spot, onSaved, onCancel }: Props) {
           ))}
         </select>
       </div>
+
+      <TagPicker defaultValue={spot.tags} />
 
       {error && (
         <p className="rounded-xl bg-danger-soft px-3 py-2 text-xs text-danger" role="alert">

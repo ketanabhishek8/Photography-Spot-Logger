@@ -9,6 +9,7 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_NAME_LENGTH,
   MAX_UPLOAD_BYTES,
+  parseTags,
   PHOTO_BUCKET,
   PUBLIC_SPOT_COLUMNS,
   THUMBNAIL_TARGET_WIDTH,
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
   const latitude = Number(form.get("latitude"));
   const longitude = Number(form.get("longitude"));
   const photo = form.get("photo");
+  const parsedTags = parseTags(form.getAll("tags"));
 
   if (!name) return bad("A spot name is required.");
   if (name.length > MAX_NAME_LENGTH) return bad(`Name must be under ${MAX_NAME_LENGTH} characters.`);
@@ -80,6 +82,7 @@ export async function POST(request: NextRequest) {
     return bad("Latitude must be between -90 and 90.");
   if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)
     return bad("Longitude must be between -180 and 180.");
+  if ("error" in parsedTags) return bad(parsedTags.error);
   if (!(photo instanceof File) || photo.size === 0) return bad("A photo is required.");
   if (!ALLOWED_MIME.includes(photo.type as (typeof ALLOWED_MIME)[number]))
     return bad("Photo must be a JPEG, PNG or WebP.");
@@ -160,6 +163,7 @@ export async function POST(request: NextRequest) {
       longitude,
       photo_path: photoPath,
       best_time: bestTime || null,
+      tags: parsedTags.tags,
       is_seed: false,
       owner_token: ownerToken,
     })

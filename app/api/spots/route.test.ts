@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
-import { MAX_BEST_TIME_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, MAX_UPLOAD_BYTES } from "@/lib/types";
+import {
+  MAX_BEST_TIME_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_NAME_LENGTH,
+  MAX_TAGS,
+  MAX_UPLOAD_BYTES,
+  SPOT_TAGS,
+} from "@/lib/types";
 
 const URL = "http://localhost:3000/api/spots";
 
@@ -70,6 +77,32 @@ describe("POST /api/spots validation", () => {
     const res = await post(validForm({ best_time: "C".repeat(MAX_BEST_TIME_LENGTH + 1) }));
     expect(res.status).toBe(400);
     expect((await res.json()).error).toMatch(/best time/i);
+  });
+
+  it("rejects an unknown tag", async () => {
+    const form = validForm();
+    form.append("tags", "beach");
+    form.append("tags", "volcano");
+    const res = await post(form);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/unknown tag: volcano/i);
+  });
+
+  it("rejects more than MAX_TAGS tags", async () => {
+    const form = validForm();
+    for (const tag of SPOT_TAGS.slice(0, MAX_TAGS + 1)) form.append("tags", tag);
+    const res = await post(form);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/at most/i);
+  });
+
+  it("accepts valid tags (fails later, on the missing photo)", async () => {
+    const form = validForm();
+    form.append("tags", "fort");
+    form.append("tags", "heritage");
+    const res = await post(form);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/photo/i);
   });
 
   it("rejects an out-of-range latitude", async () => {

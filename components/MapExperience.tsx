@@ -8,7 +8,7 @@ import EditSpotForm from "@/components/EditSpotForm";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getSupabase, photoThumbUrl } from "@/lib/supabase/client";
 import { LIGHT_BUCKETS, lightBucket, type LightBucket } from "@/lib/light";
-import type { Spot } from "@/lib/types";
+import { SPOT_TAGS, type Spot } from "@/lib/types";
 
 /**
  * Leaflet touches `window` at import time, so the map must never be server
@@ -42,6 +42,8 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
   const [search, setSearch] = useState("");
   // Empty means "all" - otherwise only spots in the chosen light buckets.
   const [lightFilter, setLightFilter] = useState<LightBucket[]>([]);
+  // Same "empty means all" rule; a spot matches if it has any selected tag.
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [view, setView] = useState<"list" | "gallery">("list");
   const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
     );
   }
 
-  // Nearby + search, before the light filter - kept separate so the legend
+  // Nearby + search + tags, before the light filter - kept separate so the legend
   // can show how many spots each bucket would add back if toggled on.
   const baseVisible = useMemo(() => {
     let list = nearbyIds ? spots.filter((s) => nearbyIds.includes(s.id)) : spots;
@@ -106,8 +108,17 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
       );
     }
 
+    if (tagFilter.length) list = list.filter((s) => s.tags.some((t) => tagFilter.includes(t)));
+
     return list;
-  }, [spots, nearbyIds, search]);
+  }, [spots, nearbyIds, search, tagFilter]);
+
+  // Only offer chips for tags that at least one spot actually has, in the
+  // canonical SPOT_TAGS order.
+  const availableTags = useMemo(
+    () => SPOT_TAGS.filter((tag) => spots.some((s) => s.tags.includes(tag))),
+    [spots],
+  );
 
   const visible = useMemo(
     () =>
@@ -129,7 +140,13 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
     return counts;
   }, [baseVisible]);
 
-  const filtering = search.trim() !== "" || lightFilter.length > 0;
+  const filtering = search.trim() !== "" || lightFilter.length > 0 || tagFilter.length > 0;
+
+  function toggleTag(tag: string) {
+    setTagFilter((current) =>
+      current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
+    );
+  }
 
   function toggleLight(bucket: LightBucket) {
     setLightFilter((current) =>
@@ -309,6 +326,35 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                          outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft"
             />
           )}
+
+          {!editing && availableTags.length > 0 && (
+            // One scrollable row rather than wrapping, so it costs a single
+            // line of the (already tight) mobile panel height.
+            <div
+              role="group"
+              aria-label="Filter by tag"
+              className="-mx-5 mt-2 flex gap-1.5 overflow-x-auto px-5 pb-0.5 [scrollbar-width:none]"
+            >
+              {availableTags.map((tag) => {
+                const on = tagFilter.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    aria-pressed={on}
+                    className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs capitalize transition ${
+                      on
+                        ? "border-tide bg-tide text-white"
+                        : "border-line text-ink hover:bg-accent-soft"
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -371,6 +417,7 @@ export default function MapExperience({ spots, ownedIds }: { spots: Spot[]; owne
                     onClick={() => {
                       setSearch("");
                       setLightFilter([]);
+                      setTagFilter([]);
                     }}
                     className="text-accent-text underline"
                   >

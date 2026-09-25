@@ -5,6 +5,7 @@ import {
   MAX_BEST_TIME_LENGTH,
   MAX_DESCRIPTION_LENGTH,
   MAX_NAME_LENGTH,
+  parseTags,
   PHOTO_BUCKET,
   PUBLIC_SPOT_COLUMNS,
   thumbPath,
@@ -44,7 +45,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } catch {
     return bad("Expected JSON.");
   }
-  const { name, description, best_time } = (body ?? {}) as Record<string, unknown>;
+  const { name, description, best_time, tags } = (body ?? {}) as Record<string, unknown>;
 
   const trimmedName = String(name ?? "").trim();
   const trimmedDescription = String(description ?? "").trim();
@@ -57,6 +58,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (trimmedBestTime.length > MAX_BEST_TIME_LENGTH)
     return bad(`Best time must be under ${MAX_BEST_TIME_LENGTH} characters.`);
 
+  // Optional, so a client that predates tags (or just doesn't send them)
+  // leaves a spot's existing tags alone rather than wiping them.
+  const parsedTags = tags === undefined ? null : parseTags(tags);
+  if (parsedTags && "error" in parsedTags) return bad(parsedTags.error);
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("spots")
@@ -64,6 +70,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       name: trimmedName,
       description: trimmedDescription || null,
       best_time: trimmedBestTime || null,
+      ...(parsedTags ? { tags: parsedTags.tags } : {}),
     })
     .eq("id", id)
     .eq("owner_token", ownerToken)

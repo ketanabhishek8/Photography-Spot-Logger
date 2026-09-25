@@ -183,6 +183,7 @@ async function seedOne(spot) {
       longitude: spot.longitude,
       photo_path: photoPath,
       best_time: spot.best_time,
+      tags: spot.tags ?? [],
       attribution: `${meta.artist} via Wikimedia Commons`,
       license: meta.license,
       source_url: meta.descriptionUrl,

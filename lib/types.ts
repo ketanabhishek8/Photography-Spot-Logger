@@ -8,6 +8,8 @@ export type Spot = {
   /** Object path inside the `spot-photos` bucket, e.g. "seed/gateway-of-india.jpg". */
   photo_path: string;
   best_time: string | null;
+  /** Zero or more of SPOT_TAGS. */
+  tags: string[];
   attribution: string | null;
   license: string | null;
   source_url: string | null;
@@ -27,7 +29,7 @@ export const PHOTO_BUCKET = "spot-photos";
  * grant anon/authenticated get in supabase/schema.sql.
  */
 export const PUBLIC_SPOT_COLUMNS =
-  "id, name, description, latitude, longitude, photo_path, best_time, attribution, license, source_url, is_seed, created_at";
+  "id, name, description, latitude, longitude, photo_path, best_time, tags, attribution, license, source_url, is_seed, created_at";
 
 /** Map defaults: Mumbai, wide enough to take in Colaba through Borivali. */
 export const MUMBAI_CENTER: [number, number] = [19.076, 72.8777];
@@ -56,6 +58,29 @@ export const BEST_TIME_OPTIONS = [
   "Midday",
   "Monsoon mornings",
 ] as const;
+
+/**
+ * The fixed tag vocabulary, mirrored by the spots_tags_allowed CHECK
+ * constraint in supabase/schema.sql. Fixed rather than free text so the
+ * sidebar's filter chips stay a short, predictable list.
+ */
+export const SPOT_TAGS = ["heritage", "fort", "beach", "skyline", "nature", "sacred", "street"] as const;
+export type SpotTag = (typeof SPOT_TAGS)[number];
+export const MAX_TAGS = 4;
+
+/**
+ * Validates tags from a request (form values or a JSON array): lowercases,
+ * trims, dedupes, and rejects anything outside SPOT_TAGS or more than
+ * MAX_TAGS. Shared by POST /api/spots and PATCH /api/spots/[id].
+ */
+export function parseTags(raw: unknown): { tags: SpotTag[] } | { error: string } {
+  if (!Array.isArray(raw)) return { error: "Tags must be a list." };
+  const tags = [...new Set(raw.map((t) => String(t).trim().toLowerCase()).filter(Boolean))];
+  const unknown = tags.filter((t) => !(SPOT_TAGS as readonly string[]).includes(t));
+  if (unknown.length) return { error: `Unknown tag: ${unknown.join(", ")}.` };
+  if (tags.length > MAX_TAGS) return { error: `Pick at most ${MAX_TAGS} tags.` };
+  return { tags: tags as SpotTag[] };
+}
 
 /**
  * User uploads are downscaled to this width server-side before being stored

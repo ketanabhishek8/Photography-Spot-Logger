@@ -50,6 +50,19 @@ alter table spots add constraint spots_best_time_length
 -- this to run as its own statement to pick up the column.
 alter table spots add column if not exists owner_token text;
 
+-- Categories for the sidebar's tag filter. A fixed vocabulary (mirrored by
+-- SPOT_TAGS in lib/types.ts and validated in both API routes) rather than
+-- free text, so the filter chips stay a short, predictable list. Same
+-- `if not exists` reasoning as owner_token above.
+alter table spots add column if not exists tags text[] not null default '{}';
+
+alter table spots drop constraint if exists spots_tags_allowed;
+alter table spots add constraint spots_tags_allowed
+  check (
+    tags <@ array['heritage', 'fort', 'beach', 'skyline', 'nature', 'sacred', 'street']::text[]
+    and cardinality(tags) <= 4
+  ) not valid;
+
 -- Derived geography column so proximity search is a real spatial query, not
 -- a bounding-box approximation done in JavaScript. STORED keeps it in sync
 -- automatically whenever latitude/longitude change.
@@ -122,7 +135,7 @@ revoke select on spots from anon, authenticated;
 -- spots_within_radius() below needs SELECT on it to evaluate ST_DWithin,
 -- even though it never appears in that function's actual output.
 grant select (
-  id, name, description, latitude, longitude, photo_path, best_time,
+  id, name, description, latitude, longitude, photo_path, best_time, tags,
   attribution, license, source_url, is_seed, created_at, geog
 ) on spots to anon, authenticated;
 
@@ -157,6 +170,7 @@ returns table (
   longitude   double precision,
   photo_path  text,
   best_time   text,
+  tags        text[],
   attribution text,
   license     text,
   source_url  text,
@@ -166,7 +180,7 @@ returns table (
 language sql
 stable
 as $$
-  select id, name, description, latitude, longitude, photo_path, best_time,
+  select id, name, description, latitude, longitude, photo_path, best_time, tags,
          attribution, license, source_url, is_seed, created_at
   from spots
   where ST_DWithin(geog, ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography, radius_m)
